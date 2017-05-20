@@ -316,8 +316,8 @@ class NP_Amazon extends NucleusPlugin {
             mb_convert_variables("EUC-JP", "UTF-8", $product);
         }
         
-//		$product[date] = mktime();
-		$product[date] = time();
+//		$product['date'] = mktime();
+		$product['date'] = time();
 		
 
         $sql = 'UPDATE '.sql_table('plugin_amazon')
