@@ -580,33 +580,33 @@ FORM;
 <input type="hidden" name="name" value="Amazon" />
 <input type="hidden" name="type" value="update" />
 <p>
-<a href="http://www.amazon.co.jp/exec/obidos/ASIN/<?php echo htmlspecialchars($row->asbncode)?>/" target="_blank">go to Amazon page</a>
+<a href="http://www.amazon.co.jp/exec/obidos/ASIN/<?php echo hsc($row->asbncode)?>/" target="_blank">go to Amazon page</a>
 </p>
 
 <table>
 <tr>
 <td>ASBN</td>
-<td><?php echo htmlspecialchars($row->asbncode)?></td>
+<td><?php echo hsc($row->asbncode)?></td>
 </tr><tr>
 <td>Title</td>
-<td><input type="text" value="<?php echo htmlspecialchars($row->title)?>" name="title" size="80" /></td>
+<td><input type="text" value="<?php echo hsc($row->title)?>" name="title" size="80" /></td>
 </tr><tr>
 <td>Author</td>
-<td><input type="text" value="<?php echo htmlspecialchars($row->author)?>" name="author" size="80" /></td>
+<td><input type="text" value="<?php echo hsc($row->author)?>" name="author" size="80" /></td>
 </tr><tr>
 <td>Manufacturer</td>
-<td><input type="text" value="<?php echo htmlspecialchars($row->manufacturer)?>" name="manufacturer" size="30" /></td>
+<td><input type="text" value="<?php echo hsc($row->manufacturer)?>" name="manufacturer" size="30" /></td>
 </tr><tr>
 <td>My Rate</td>
-<td><input type="text" value="<?php echo htmlspecialchars($row->myrate)?>" name="myrate" size="1" /></td>
+<td><input type="text" value="<?php echo hsc($row->myrate)?>" name="myrate" size="1" /></td>
 </tr><tr>
 <td>User Data</td>
-<td><input type="text" value="<?php echo htmlspecialchars($row->userdata)?>" name="userdata" size="80" /></td>
+<td><input type="text" value="<?php echo hsc($row->userdata)?>" name="userdata" size="80" /></td>
 </tr><tr>
 <td>used</td>
 <td><select name="used" />
 <?php
-if(htmlspecialchars($row->used) == "yes") {
+if(hsc($row->used) == "yes") {
     echo "<option value='yes' selected>yes</option>";
     echo "<option value='no' >no</option>";
 }else{
@@ -619,7 +619,7 @@ if(htmlspecialchars($row->used) == "yes") {
 <td>img</td>
 <td><select name="img" />
 <?php
-if(htmlspecialchars($row->img) == "yes") {
+if(hsc($row->img) == "yes") {
     echo "<option value='yes' selected>yes</option>";
     echo "<option value='no' >no</option>";
 }else{
