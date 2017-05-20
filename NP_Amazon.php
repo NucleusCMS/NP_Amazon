@@ -166,7 +166,7 @@ class NP_Amazon extends NucleusPlugin {
         $result = sql_query($sql);
         while($product = sql_fetch_assoc($result)) {
             $product[date] = date('n月j日 G:i', $product[date]);
-            $this->getImages(&$product, $imgsize);
+            $this->getImages($product, $imgsize);
             if($product[catalog] == "Book" or $product[catalog] == "Music" or $product[catalog] == "DVD") {
                 $product[imgstyle] = "class='imgshadow'";
             }
@@ -229,14 +229,14 @@ class NP_Amazon extends NucleusPlugin {
 //change ma cause by mktime()
 //			if($product[date] < mktime() - $this->flashtime) {
 			if($product[date] < time() - $this->flashtime) {
-				$this->updateData(&$product);
+				$this->updateData($product);
 			}
         } else {
             $product[asbncode] = $asbncode;
-            $this->newData(&$product);
+            $this->newData($product);
         }
         $product[date] = date('n月j日 G:i', $product[date]);
-        $this->getImages(&$product, $imgsize);
+        $this->getImages($product, $imgsize);
 
         if($product[catalog] == "Book" or $product[catalog] == "Music" or $product[catalog] == "DVD") {
             $product[imgstyle] = "class='imgshadow'";
@@ -282,7 +282,7 @@ class NP_Amazon extends NucleusPlugin {
     }
 
     function newData($product) {
-        $this->getAmazonData(&$product, $mode = "new");
+        $this->getAmazonData($product, $mode = "new");
         $blogid = getBlogIDFromItemID($this->currentItem->itemid);
 //change ma cause by mktim
 //        $product['date'] = mktime();
@@ -318,7 +318,7 @@ class NP_Amazon extends NucleusPlugin {
     }
 
     function updateData($product) {
-        $this->getAmazonData(&$product, $mode = "update");
+        $this->getAmazonData($product, $mode = "update");
         if($this->encode == "EUC-JP") {
             mb_convert_variables("EUC-JP", "UTF-8", $product);
         }
