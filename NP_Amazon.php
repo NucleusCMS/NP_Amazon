@@ -1,11 +1,4 @@
 <?php
-
-if (!function_exists('sql_table')){
-    function sql_table($name) {
-        return 'nucleus_' . $name;
-    }
-}
-
 class NP_Amazon extends NucleusPlugin {
 
     function getName() {
