@@ -158,24 +158,24 @@ class NP_Amazon extends NucleusPlugin {
         $sql = "SELECT * FROM ".sql_table('plugin_amazon')." ORDER BY adddate DESC LIMIT $num";
         $result = sql_query($sql);
         while($product = sql_fetch_assoc($result)) {
-            $product[date] = date('n月j日 G:i', $product[date]);
+            $product['date'] = date('n月j日 G:i', $product['date']);
             $this->getImages($product, $imgsize);
-            if($product[catalog] == "Book" or $product[catalog] == "Music" or $product[catalog] == "DVD") {
-                $product[imgstyle] = "class='imgshadow'";
+            if($product['catalog'] == "Book" or $product['catalog'] == "Music" or $product['catalog'] == "DVD") {
+                $product['imgstyle'] = "class='imgshadow'";
             }
 
-            if(strstr($product[asbncode], 'none') == FALSE) {
-                $showurl = '<a href="http://www.amazon.co.jp/exec/obidos/ASIN/'.$product[asbncode].'/'.$this->aid.'" target="_blank">';
-                $product[showimg] = $showurl.'<img src="'.$product[imgfile].'" '.$product[attr].' border="0" '.$product[imgstyle].' alt="'.$product[title].'" /></a>';
-                $product[showtitle] = $showurl.$product[title].'</a>';
-                $product[button] = $this->add_cart($asbncode);
+            if(strstr($product['asbncode'], 'none') == FALSE) {
+                $showurl = '<a href="http://www.amazon.co.jp/exec/obidos/ASIN/'.$product['asbncode'].'/'.$this->aid.'" target="_blank">';
+                $product['showimg'] = $showurl.'<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" /></a>';
+                $product['showtitle'] = $showurl.$product['title'].'</a>';
+                $product['button'] = $this->add_cart($asbncode);
             }else{
-                $product[showimg] = '<img src="'.$product[imgfile].'" '.$product[attr].' border="0" '.$product[imgstyle].' alt="'.$product[title].'" />';
-                $product[showtitle] = $product[title];
+                $product['showimg'] = '<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" />';
+                $product['showtitle'] = $product['title'];
             }
-            //$product[amazonratemark] = $this->mkRating($product[amazonrate]);
-            $product[myratemark] = $this->mkRating($product[myrate]);
-            $product[edit] = $this->canEdit()?'<a href="'.$CONF[ActionURL] . '?action=plugin&amp;name=Amazon&amp;type=edit&amp;asbncode='.$product[asbncode].'" target="_blank">edit</a>':'';
+            //$product['amazonratemark'] = $this->mkRating($product['amazonrate']);
+            $product['myratemark'] = $this->mkRating($product['myrate']);
+            $product['edit'] = $this->canEdit()?'<a href="'.$CONF['ActionURL'] . '?action=plugin&amp;name=Amazon&amp;type=edit&amp;asbncode='.$product['asbncode'].'" target="_blank">edit</a>':'';
             $this->getTemplate($template);
             $out = TEMPLATE::fill($this->template_asbn,$product);;
             echo $out;
@@ -220,54 +220,54 @@ class NP_Amazon extends NucleusPlugin {
         if(sql_num_rows($result) > 0) {
             $product = sql_fetch_assoc($result);
 //change ma cause by mktime()
-//			if($product[date] < mktime() - $this->flashtime) {
-			if($product[date] < time() - $this->flashtime) {
+//			if($product['date'] < mktime() - $this->flashtime) {
+			if($product['date'] < time() - $this->flashtime) {
 				$this->updateData($product);
 			}
         } else {
-            $product[asbncode] = $asbncode;
+            $product['asbncode'] = $asbncode;
             $this->newData($product);
         }
-        $product[date] = date('n月j日 G:i', $product[date]);
+        $product['date'] = date('n月j日 G:i', $product['date']);
         $this->getImages($product, $imgsize);
 
-        if($product[catalog] == "Book" or $product[catalog] == "Music" or $product[catalog] == "DVD") {
-            $product[imgstyle] = "class='imgshadow'";
+        if($product['catalog'] == "Book" or $product['catalog'] == "Music" or $product['catalog'] == "DVD") {
+            $product['imgstyle'] = "class='imgshadow'";
         }
 
-        if(strstr($product[asbncode], "none") == FALSE) {
-            $showurl = '<a href="http://www.amazon.co.jp/exec/obidos/ASIN/'.$product[asbncode].'/'.$this->aid.'" target="_blank">';
-            $product[showimg] = $showurl.'<img src="'.$product[imgfile].'" '.$product[attr].' border="0" '.$product[imgstyle].' alt="'.$product[title].'" /></a>';
-            $product[showtitle] = $showurl.$product[title].'</a>';
-            $product[button] = $this->add_cart($asbncode);
+        if(strstr($product['asbncode'], "none") == FALSE) {
+            $showurl = '<a href="http://www.amazon.co.jp/exec/obidos/ASIN/'.$product['asbncode'].'/'.$this->aid.'" target="_blank">';
+            $product['showimg'] = $showurl.'<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" /></a>';
+            $product['showtitle'] = $showurl.$product['title'].'</a>';
+            $product['button'] = $this->add_cart($asbncode);
         }else{
-            $product[showimg] = '<img src="'.$product[imgfile].'" '.$product[attr].' border="0" '.$product[imgstyle].' alt="'.$product[title].'" />';
-            $product[showtitle] = $product[title];
+            $product['showimg'] = '<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" />';
+            $product['showtitle'] = $product['title'];
         }
 
-        $product[similars] = $this->convertSimilar($product[similar], $similarnum);
-        if($product[similars] != "") {
-            $product[similars] = 'Amazon関連商品<br />'.$product[similars];
+        $product['similars'] = $this->convertSimilar($product['similar'], $similarnum);
+        if($product['similars'] != "") {
+            $product['similars'] = 'Amazon関連商品<br />'.$product['similars'];
         }
 
-        $product[amazonratemark] = $this->mkRating($product[amazonrate]);
-        $product[myratemark] = $this->mkRating($product[myrate]);
+        $product['amazonratemark'] = $this->mkRating($product['amazonrate']);
+        $product['myratemark'] = $this->mkRating($product['myrate']);
 
-        if($product[point] == "") {
-            $product[point] = "なし";
+        if($product['point'] == "") {
+            $product['point'] = "なし";
         }else{
-            $product[point] = $product[point]."pt";
+            $product['point'] = $product['point']."pt";
         }
 
-        if($product[ourprice] == "") {
-            $product[ourprice] = "在庫切れ";
+        if($product['ourprice'] == "") {
+            $product['ourprice'] = "在庫切れ";
         }
 
-        if($product[availability] == "") {
-            $product[availability] = "在庫切れ";
+        if($product['availability'] == "") {
+            $product['availability'] = "在庫切れ";
         }
 
-        $product[edit] = $this->canEdit()?'<a href="'.$CONF[ActionURL] . '?action=plugin&amp;name=Amazon&amp;type=edit&amp;asbncode='.$product[asbncode].'" target="_blank">edit</a>':'';
+        $product['edit'] = $this->canEdit()?'<a href="'.$CONF['ActionURL'] . '?action=plugin&amp;name=Amazon&amp;type=edit&amp;asbncode='.$product['asbncode'].'" target="_blank">edit</a>':'';
 
         $this->getTemplate($template);
         $out = TEMPLATE::fill($this->template_asbn,$product);;
@@ -287,22 +287,22 @@ class NP_Amazon extends NucleusPlugin {
         $sql = 'INSERT INTO ' . sql_table('plugin_amazon')
         . " (blogid, asbncode, title, catalog, media, author, manufacturer, listprice, ourprice, point, releasedate, availability, amazonrate, myrate, similar, imgsize, date, adddate)"
         . "VALUES ('".$blogid."',
-        '".addslashes($product[asbncode])."',
-        '".addslashes($product[title])."',
-        '".addslashes($product[catalog])."',
-        '".addslashes($product[media])."',
-        '".addslashes($product[author])."',
-        '".addslashes($product[manufacturer])."',
-        '".addslashes($product[listprice])."',
-        '".addslashes($product[ourprice])."',
-        '".addslashes($product[point])."',
-        '".addslashes($product[releasedate])."',
-        '".addslashes($product[availability])."',
-		'".addslashes(floatval($product[myrate]))."',
-        '".addslashes($product[similar])."',
-		'".addslashes($product[imgsize])."',
+        '".addslashes($product['asbncode'])."',
+        '".addslashes($product['title'])."',
+        '".addslashes($product['catalog'])."',
+        '".addslashes($product['media'])."',
+        '".addslashes($product['author'])."',
+        '".addslashes($product['manufacturer'])."',
+        '".addslashes($product['listprice'])."',
+        '".addslashes($product['ourprice'])."',
+        '".addslashes($product['point'])."',
+        '".addslashes($product['releasedate'])."',
+        '".addslashes($product['availability'])."',
+		'".addslashes(floatval($product['myrate']))."',
+        '".addslashes($product['similar'])."',
+		'".addslashes($product['imgsize'])."',
         ".time().",".time().")";
-		//		'".addslashes(floatval($product[amazonrate]))."',
+		//		'".addslashes(floatval($product['amazonrate']))."',
 		//mktime()
         //$res = @sql_query($sql);
 		$res = @sql_query($sql);
@@ -321,14 +321,14 @@ class NP_Amazon extends NucleusPlugin {
 		
 
         $sql = 'UPDATE '.sql_table('plugin_amazon')
-            . " SET     ourprice='". addslashes($product[ourprice]) . "',"
-            . "     point='". addslashes($product[point]) . "',"
-            . "     availability='" . addslashes($product[availability]) . "',"
-            . "     similar='". addslashes($product[similar]) . "',"
-            . "     imgsize='". addslashes($product[imgsize]) . "',"
-            . "     date='" . addslashes($product[date])  . "'"
-            . " WHERE asbncode='" . addslashes($product[asbncode])."'";
-			//. " SET amazonrate='" . addslashes($product[amazonrate]) . "',"
+            . " SET     ourprice='". addslashes($product['ourprice']) . "',"
+            . "     point='". addslashes($product['point']) . "',"
+            . "     availability='" . addslashes($product['availability']) . "',"
+            . "     similar='". addslashes($product['similar']) . "',"
+            . "     imgsize='". addslashes($product['imgsize']) . "',"
+            . "     date='" . addslashes($product['date'])  . "'"
+            . " WHERE asbncode='" . addslashes($product['asbncode'])."'";
+			//. " SET amazonrate='" . addslashes($product['amazonrate']) . "',"
 //       sql_query($sql);*/
 		sql_query($sql);
     }
@@ -340,7 +340,7 @@ class NP_Amazon extends NucleusPlugin {
 		$params["Timestamp"] = gmdate("Y-m-d\TH:i:s\Z");
 		$params["Version"] = "2009-03-31";
 		$params["AssociateTag"] = $this->aid;
-		$params["ItemId"] = $product[asbncode];
+		$params["ItemId"] = $product['asbncode'];
 		$params["ItemPage"] = "1";
 		$params["Operation"] = "ItemLookup";
 		$params["ResponseGroup"] = "Small,ItemAttributes,OfferFull,Images,Similarities,Reviews";
@@ -367,68 +367,68 @@ class NP_Amazon extends NucleusPlugin {
 		$request = $baseurl.$query."&Signature=".$signature;
 		$xml = file_get_contents($request);
         $ews = XML_unserialize($xml);
-        $ews_item = &$ews[ItemLookupResponse][Items][Item];
+        $ews_item = &$ews['ItemLookupResponse']['Items']['Item'];
         $ews = "";
 
         if($mode == "new") {
-            $product[title] = $ews_item[ItemAttributes][Title];
-            $product[catalog] = $ews_item[ItemAttributes][ProductGroup];
-            $product[media] = $ews_item[ItemAttributes][Binding];
-            $product[manufacturer] = $ews_item[ItemAttributes][Manufacturer];
-            $product[releasedate] = $ews_item[ItemAttributes][ReleaseDate];
-            $product[listprice] = $ews_item[ItemAttributes][ListPrice][FormattedPrice];
+            $product['title'] = $ews_item['ItemAttributes']['Title'];
+            $product['catalog'] = $ews_item['ItemAttributes']['ProductGroup'];
+            $product['media'] = $ews_item['ItemAttributes']['Binding'];
+            $product['manufacturer'] = $ews_item['ItemAttributes']['Manufacturer'];
+            $product['releasedate'] = $ews_item['ItemAttributes']['ReleaseDate'];
+            $product['listprice'] = $ews_item['ItemAttributes']['ListPrice']['FormattedPrice'];
 
-            if(is_array($ews_item[ItemAttributes][Author])) {
+            if(is_array($ews_item['ItemAttributes']['Author'])) {
                 $i = 0;
-                while($ews_item[ItemAttributes][Author][$i] != "") {
-                    $author[] = $ews_item[ItemAttributes][Author][$i];
+                while($ews_item['ItemAttributes']['Author'][$i] != "") {
+                    $author[] = $ews_item['ItemAttributes']['Author'][$i];
                     $i = $i + 1;
                 }
                 if(is_array($author)) {
-                    $product[author] = implode("、", $author);
+                    $product['author'] = implode("、", $author);
                 }
-            } elseif($ews_item[ItemAttributes][Author] != "") {
-                $product[author] = $ews_item[ItemAttributes][Author];
+            } elseif($ews_item['ItemAttributes']['Author'] != "") {
+                $product['author'] = $ews_item['ItemAttributes']['Author'];
             }
 
-            if(is_array($ews_item[ItemAttributes][Artist])) {
+            if(is_array($ews_item['ItemAttributes']['Artist'])) {
                 $i = 0;
-                while($ews_item[ItemAttributes][Artist][$i] != "") {
-                    $author[] = $ews_item[ItemAttributes][Artist][$i];
+                while($ews_item['ItemAttributes']['Artist'][$i] != "") {
+                    $author[] = $ews_item['ItemAttributes']['Artist'][$i];
                     $i = $i + 1;
                 }
                 if(is_array($author)) {
-                    $product[author] = implode("、", $author);
+                    $product['author'] = implode("、", $author);
                 }
-            } elseif($ews_item[ItemAttributes][Artist] != "") {
-                $product[author] = $ews_item[ItemAttributes][Artist];
+            } elseif($ews_item['ItemAttributes']['Artist'] != "") {
+                $product['author'] = $ews_item['ItemAttributes']['Artist'];
             }
         }
 
-        $product[ourprice] = $ews_item[Offers][Offer][OfferListing][Price][FormattedPrice];
-        //$product[amazonrate] = $ews_item[CustomerReviews][AverageRating];
-        $product[availability] = $ews_item[Offers][Offer][OfferListing][Availability];
-        $product[point] = $ews_item[Offers][Offer][LoyaltyPoints][TypicalRedemptionValue][Amount];
+        $product['ourprice'] = $ews_item['Offers']['Offer']['OfferListing']['Price']['FormattedPrice'];
+        //$product['amazonrate'] = $ews_item['CustomerReviews']['AverageRating'];
+        $product['availability'] = $ews_item['Offers']['Offer']['OfferListing']['Availability'];
+        $product['point'] = $ews_item['Offers']['Offer']['LoyaltyPoints']['TypicalRedemptionValue']['Amount'];
 
         $i = 0;
-        while($ews_item[SimilarProducts][SimilarProduct][$i][Title] != "") {
+        while($ews_item['SimilarProducts']['SimilarProduct'][$i]['Title'] != "") {
             if($i == 0) {
-                $product[similar] = "";
+                $product['similar'] = "";
             }else{
-                $product[similar] .= "|";
+                $product['similar'] .= "|";
             }
-            $product[similar] .= $ews_item[SimilarProducts][SimilarProduct][$i][ASIN] . ":" . $ews_item[SimilarProducts][SimilarProduct][$i][Title];
+            $product['similar'] .= $ews_item['SimilarProducts']['SimilarProduct'][$i]['ASIN'] . ":" . $ews_item['SimilarProducts']['SimilarProduct'][$i]['Title'];
             $i = $i + 1;
         }
 
         $size = array("Small","Medium","Large");
-        $product[imgsize] = "";
+        $product['imgsize'] = "";
         foreach($size as $tmp) {
             $imgsize = $tmp."Image";
             if($tmp != "Small") {
-                $product[imgsize] .= ",";
+                $product['imgsize'] .= ",";
             }
-            $product[imgsize] .= $ews_item[$imgsize][Width] . "," . $ews_item[$imgsize][Height];
+            $product['imgsize'] .= $ews_item[$imgsize]['Width'] . "," . $ews_item[$imgsize]['Height'];
         }
     }
 
@@ -454,7 +454,7 @@ class NP_Amazon extends NucleusPlugin {
         global $CONF, $DIR_MEDIA;
         $amazonurl = 'http://images.amazon.com/images/P/';
         $result = "no";
-        $tmpsize = explode(",", $product[imgsize]);
+        $tmpsize = explode(",", $product['imgsize']);
 
         switch($size) {
             case 's':
@@ -491,15 +491,15 @@ class NP_Amazon extends NucleusPlugin {
 		$noimg = 'http://images-jp.amazon.com/images/G/09/nav2/dp/no-image-no-ciu._AA'. $noimgsize .'_.gif';
 
 
-        $imgfile = $product[asbncode] .'.09.'.$img;
+        $imgfile = $product['asbncode'] .'.09.'.$img;
 
         if($width != "") {
-            $product[imgfile] = $amazonurl. $imgfile;
-            $product[attr] = 'width="'.$width.'" height="'.$height.'"';
+            $product['imgfile'] = $amazonurl. $imgfile;
+            $product['attr'] = 'width="'.$width.'" height="'.$height.'"';
             $result = "yes";
         } else {
- //           $product[attr] = 'width="50" height="60"';
-            $product[imgfile] = $noimg;
+ //           $product['attr'] = 'width="50" height="60"';
+            $product['imgfile'] = $noimg;
         }
     }
 
