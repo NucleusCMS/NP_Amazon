@@ -14,7 +14,7 @@ class NP_Amazon extends NucleusPlugin {
     }
 
     function getVersion() {
-        return '0.5.2';
+        return '0.6';
     }
 
     function getDescription() {
@@ -767,4 +767,3 @@ if(hsc($row->img) == "yes") {
         }
     }
 }
-?>
