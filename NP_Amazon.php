@@ -287,22 +287,22 @@ class NP_Amazon extends NucleusPlugin {
         $sql = 'INSERT INTO ' . sql_table('plugin_amazon')
         . " (blogid, asbncode, title, catalog, media, author, manufacturer, listprice, ourprice, point, releasedate, availability, amazonrate, myrate, similar, imgsize, date, adddate)"
         . "VALUES ('".$blogid."',
-        '".addslashes($product['asbncode'])."',
-        '".addslashes($product['title'])."',
-        '".addslashes($product['catalog'])."',
-        '".addslashes($product['media'])."',
-        '".addslashes($product['author'])."',
-        '".addslashes($product['manufacturer'])."',
-        '".addslashes($product['listprice'])."',
-        '".addslashes($product['ourprice'])."',
-        '".addslashes($product['point'])."',
-        '".addslashes($product['releasedate'])."',
-        '".addslashes($product['availability'])."',
-		'".addslashes(floatval($product['myrate']))."',
-        '".addslashes($product['similar'])."',
-		'".addslashes($product['imgsize'])."',
+        '".sql_real_escape_string($product['asbncode'])."',
+        '".sql_real_escape_string($product['title'])."',
+        '".sql_real_escape_string($product['catalog'])."',
+        '".sql_real_escape_string($product['media'])."',
+        '".sql_real_escape_string($product['author'])."',
+        '".sql_real_escape_string($product['manufacturer'])."',
+        '".sql_real_escape_string($product['listprice'])."',
+        '".sql_real_escape_string($product['ourprice'])."',
+        '".sql_real_escape_string($product['point'])."',
+        '".sql_real_escape_string($product['releasedate'])."',
+        '".sql_real_escape_string($product['availability'])."',
+		'".sql_real_escape_string(floatval($product['myrate']))."',
+        '".sql_real_escape_string($product['similar'])."',
+		'".sql_real_escape_string($product['imgsize'])."',
         ".time().",".time().")";
-		//		'".addslashes(floatval($product['amazonrate']))."',
+		//		'".sql_real_escape_string(floatval($product['amazonrate']))."',
 		//mktime()
         //$res = @sql_query($sql);
 		$res = @sql_query($sql);
@@ -321,14 +321,14 @@ class NP_Amazon extends NucleusPlugin {
 		
 
         $sql = 'UPDATE '.sql_table('plugin_amazon')
-            . " SET     ourprice='". addslashes($product['ourprice']) . "',"
-            . "     point='". addslashes($product['point']) . "',"
-            . "     availability='" . addslashes($product['availability']) . "',"
-            . "     similar='". addslashes($product['similar']) . "',"
-            . "     imgsize='". addslashes($product['imgsize']) . "',"
-            . "     date='" . addslashes($product['date'])  . "'"
-            . " WHERE asbncode='" . addslashes($product['asbncode'])."'";
-			//. " SET amazonrate='" . addslashes($product['amazonrate']) . "',"
+            . " SET     ourprice='". sql_real_escape_string($product['ourprice']) . "',"
+            . "     point='". sql_real_escape_string($product['point']) . "',"
+            . "     availability='" . sql_real_escape_string($product['availability']) . "',"
+            . "     similar='". sql_real_escape_string($product['similar']) . "',"
+            . "     imgsize='". sql_real_escape_string($product['imgsize']) . "',"
+            . "     date='" . sql_real_escape_string($product['date'])  . "'"
+            . " WHERE asbncode='" . sql_real_escape_string($product['asbncode'])."'";
+			//. " SET amazonrate='" . sql_real_escape_string($product['amazonrate']) . "',"
 //       sql_query($sql);*/
 		sql_query($sql);
     }
@@ -659,13 +659,13 @@ if(htmlspecialchars($row->img) == "yes") {
                 $used = requestVar('used');
                 $img = requestVar('img');
                 $sql = 'UPDATE '.sql_table('plugin_amazon')
-                    . " SET title='" . addslashes($title) . "',"
-                    . "     author='". addslashes($author) . "',"
-                    . "     manufacturer='" . addslashes($manufacturer) . "',"
-                    . "     myrate='" . floatval(addslashes($myrate)) . "',"
-                    . "     userdata='" . addslashes($userdata) . "',"
-                    . "     used='" . addslashes($used) . "',"
-                    . "     img='" . addslashes($img)  . "'"
+                    . " SET title='" . sql_real_escape_string($title) . "',"
+                    . "     author='". sql_real_escape_string($author) . "',"
+                    . "     manufacturer='" . sql_real_escape_string($manufacturer) . "',"
+                    . "     myrate='" . floatval(sql_real_escape_string($myrate)) . "',"
+                    . "     userdata='" . sql_real_escape_string($userdata) . "',"
+                    . "     used='" . sql_real_escape_string($used) . "',"
+                    . "     img='" . sql_real_escape_string($img)  . "'"
                     . " WHERE asbncode='" . $asbncode."'";
                 //$res = sql_query($sql);
 				$res = sql_query($sql);
