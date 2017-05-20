@@ -28,14 +28,7 @@ class NP_Amazon extends NucleusPlugin {
         return 'Amazon Associate plugin.<br />Usage:<br />in Item &lt;%Amazon(asbn|imgsize|related|template)%&gt;<br />in Skin &lt;%Amazon(imgsize|list num|template)%&gt;';
     }
 
-    function supportsFeature($what) {
-        switch($what){
-            case 'SqlTablePrefix':
-                return 1;
-            default:
-                return 0;
-        }
-    }
+    function supportsFeature($feature) { return in_array ($feature, array ('SqlTablePrefix', 'SqlApi')); }
 
     function getTableList() { return array( sql_table('plugin_amazon') ); }
     function getEventList() { return array('PreItem'); }
@@ -76,52 +69,52 @@ class NP_Amazon extends NucleusPlugin {
         $sql .= " img enum('yes', 'no') default 'no',";
         $sql .= " PRIMARY KEY (id),";
         $sql .= " UNIQUE(asbncode) ENGINE=MyISAM)";
-        //mysql_query($sql);
+        //sql_query($sql);
 		sql_query($sql);
 
         $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like point";
-        if(mysql_query($sql) == "") {
+        if(sql_query($sql) == "") {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD point varchar(50) default NULL";
             $sql .= " AFTER ourprice";
-            mysql_query($sql);
+            sql_query($sql);
         }
 
         $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like releasedate";
-        if(mysql_query($sql) == "") {
+        if(sql_query($sql) == "") {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD releasedate varchar(50) default NULL";
             $sql .= " AFTER point";
-            mysql_query($sql);
+            sql_query($sql);
         }
 
         $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like userdata";
-        if(mysql_query($sql) == "") {
+        if(sql_query($sql) == "") {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD userdata varchar(250) default NULL";
             $sql .= " AFTER used";
-            mysql_query($sql);
+            sql_query($sql);
         }
 
         $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like imgsize";
-        if(mysql_query($sql) == "") {
+        if(sql_query($sql) == "") {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD imgsize varchar(60) default NULL";
             $sql .= " AFTER similar";
-            mysql_query($sql);
+            sql_query($sql);
         }
 
         $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like extradata";
-        if(mysql_query($sql) == "") {
+        if(sql_query($sql) == "") {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD extradata varchar(255) default NULL";
             $sql .= " AFTER myrate";
-            mysql_query($sql);
+            sql_query($sql);
         }
 
         $sql = "ALTER TABLE ".sql_table('plugin_amazon');
         $sql .= " CHANGE asbncode asbncode varchar(15)";
-        mysql_query($sql);
+        sql_query($sql);
 
         if(!is_dir($DIR_MEDIA."aws")) {
             mkdir($DIR_MEDIA."aws", 0755);
@@ -130,7 +123,7 @@ class NP_Amazon extends NucleusPlugin {
 
     function uninstall() {
         if($this->getOption('del_uninstall') == "yes") {
-            mysql_query("DROP table ".sql_table('plugin_amazon'));
+            sql_query("DROP table ".sql_table('plugin_amazon'));
         }
 		$this->deleteOption('del_uninstall');
     }
@@ -170,8 +163,8 @@ class NP_Amazon extends NucleusPlugin {
         }
 
         $sql = "SELECT * FROM ".sql_table('plugin_amazon')." ORDER BY adddate DESC LIMIT $num";
-        $result = mysql_query($sql);
-        while($product = mysql_fetch_assoc($result)) {
+        $result = sql_query($sql);
+        while($product = sql_fetch_assoc($result)) {
             $product[date] = date('n月j日 G:i', $product[date]);
             $this->getImages(&$product, $imgsize);
             if($product[catalog] == "Book" or $product[catalog] == "Music" or $product[catalog] == "DVD") {
@@ -228,11 +221,11 @@ class NP_Amazon extends NucleusPlugin {
         }
 
         $sql = "SELECT * FROM ".sql_table('plugin_amazon')." WHERE asbncode='".$asbncode."' LIMIT 1";
-        //$result = mysql_query($sql);
+        //$result = sql_query($sql);
 		$result = sql_query($sql);
 
-        if(mysql_num_rows($result) > 0) {
-            $product = mysql_fetch_assoc($result);
+        if(sql_num_rows($result) > 0) {
+            $product = sql_fetch_assoc($result);
 //change ma cause by mktime()
 //			if($product[date] < mktime() - $this->flashtime) {
 			if($product[date] < time() - $this->flashtime) {
@@ -318,10 +311,10 @@ class NP_Amazon extends NucleusPlugin {
         ".time().",".time().")";
 		//		'".addslashes(floatval($product[amazonrate]))."',
 		//mktime()
-        //$res = @mysql_query($sql);
+        //$res = @sql_query($sql);
 		$res = @sql_query($sql);
         if(!$res)
-            return 'Could not save data, possibly because of a double entry: ' . mysql_error();
+            return 'Could not save data, possibly because of a double entry: ' . sql_error();
     }
 
     function updateData($product) {
@@ -343,7 +336,7 @@ class NP_Amazon extends NucleusPlugin {
             . "     date='" . addslashes($product[date])  . "'"
             . " WHERE asbncode='" . addslashes($product[asbncode])."'";
 			//. " SET amazonrate='" . addslashes($product[amazonrate]) . "',"
-//       mysql_query($sql);*/
+//       sql_query($sql);*/
 		sql_query($sql);
     }
 
@@ -574,9 +567,9 @@ FORM;
                     return 'You\'re not allowed to edit this data';
                 }
                 $sql = "SELECT * FROM ".sql_table('plugin_amazon')." WHERE asbncode='".$asbncode."' LIMIT 1";
-                //$result = mysql_query($sql);
+                //$result = sql_query($sql);
 				$result = sql_query($sql);
-                $row = mysql_fetch_object($result);
+                $row = sql_fetch_object($result);
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
@@ -681,7 +674,7 @@ if(htmlspecialchars($row->img) == "yes") {
                     . "     used='" . addslashes($used) . "',"
                     . "     img='" . addslashes($img)  . "'"
                     . " WHERE asbncode='" . $asbncode."'";
-                //$res = mysql_query($sql);
+                //$res = sql_query($sql);
 				$res = sql_query($sql);
                 header('Location: ' . $CONF['ActionURL'] . '?action=plugin&name=Amazon&type=edit&asbncode='.$asbncode);
                 break;
@@ -691,10 +684,10 @@ if(htmlspecialchars($row->img) == "yes") {
                     return 'You\'re not allowed to edit this data';
                 }
                 $sql = 'DELETE FROM ' . sql_table('plugin_amazon') . " WHERE asbncode='" . $asbncode."'";
-                //$res = mysql_query($sql);
+                //$res = sql_query($sql);
 				$res = sql_query($sql);
         if(!$res){
-            echo 'Could not save data, possibly because of a double entry: ' . mysql_error();}
+            echo 'Could not save data, possibly because of a double entry: ' . sql_error();}
                 echo '<p>* After reflesh item page, reget Amazon data.<br /><a href="" onclick="window.close();">Close this windows</a></p>';
                 break;
             default:
