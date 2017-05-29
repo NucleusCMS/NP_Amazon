@@ -14,7 +14,7 @@ class NP_Amazon extends NucleusPlugin {
     }
 
     function getVersion() {
-        return '0.6';
+        return '0.6.1';
     }
 
     function getDescription() {
