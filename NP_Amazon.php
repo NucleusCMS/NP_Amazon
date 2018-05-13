@@ -256,7 +256,7 @@ EOL;
                 $product['showimg'] = '<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" />';
                 $product['showtitle'] = $product['title'];
             }
-            //$product['amazonratemark'] = $this->mkRating($product['amazonrate']);
+            $product['amazonratemark'] = $this->mkRating($product['amazonrate']);
             $product['myratemark'] = $this->mkRating($product['myrate']);
             $product['edit'] = $this->canEdit()?'<a href="'.$CONF['ActionURL'] . '?action=plugin&amp;name=Amazon&amp;type=edit&amp;asbncode='.$product['asbncode'].'" target="_blank">edit</a>':'';
             $this->getTemplate($template);
@@ -568,7 +568,11 @@ EOL;
         }
 
         $product['ourprice'] = $ews_item['Offers']['Offer']['OfferListing']['Price']['FormattedPrice'];
-        //$product['amazonrate'] = $ews_item['CustomerReviews']['AverageRating'];
+
+        // 2010/11/08 に CustomerReviews はリンクのみ返すように仕様変更された。
+        //   CustomerReviews/IFrameURL , CustomerReviews/HasReviews
+        $product['amazonrate'] = 0; //$ews_item['CustomerReviews']['AverageRating'];
+
         $product['availability'] = $ews_item['Offers']['Offer']['OfferListing']['Availability'];
         $product['point'] = $ews_item['Offers']['Offer']['LoyaltyPoints']['TypicalRedemptionValue']['Amount'];
 
@@ -674,7 +678,7 @@ EOL;
     }
 
 	function mkRating($rate) {
-		if($rate == 0 || $rate == "") {
+		if(empty($rate) || $rate == 0 || $rate == "") {
 			$rating = '0-0';
 		} elseif($rate >= 0 && $rate < 1) {
 			$rating = '0-0';
@@ -925,7 +929,7 @@ if(hsc($row->img) == "yes") {
 				$this->template_asbn .= '<%ourprice%>&nbsp;（Amazon価格）<br />';
 				$this->template_asbn .= '<%point%>&nbsp;（Amazonポイント）<br />';
 				$this->template_asbn .= '<img src="<%myratemark%>" title="<%myrate%>" alt="<%myrate%>" />&nbsp;（私のおすすめ度）<br />';
-				$this->template_asbn .= '<img src="<%amazonratemark%>" alt="<%amazonrate%>" title="<%amazonrate%>" />&nbsp;（Amazonおすすめ度）<br />';
+//				$this->template_asbn .= '<img src="<%amazonratemark%>" alt="<%amazonrate%>" title="<%amazonrate%>" />&nbsp;（Amazonおすすめ度）<br />';
 				$this->template_asbn .= '<%media%><br />';
 				$this->template_asbn .= '<%availability%><br />';
 				$this->template_asbn .= '（価格・在庫状況は<%date%>現在）<br />';
