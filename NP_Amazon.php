@@ -121,6 +121,14 @@ EOL;
                 sql_query($sql);
             }
         }
+
+        // 値のない古いデータを更新リストへ送る
+        $where = sprintf(' WHERE date >= %d', time() - $this->flashtime);
+        $where .= " AND ( detailpageurl = '' OR ( ";
+        $where .= " smallimageurl = '' AND mediumimageurl = '' AND largeimageurl = ''";
+        $where .= ' ) )';
+        $query = sprintf('UPDATE `%s` SET date = %d', sql_table('plugin_amazon'), time() - $this->flashtime -1) . $where;
+        sql_query($query);
     }
 
     protected function existTable() {
