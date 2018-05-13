@@ -186,7 +186,7 @@ class NP_Amazon extends NucleusPlugin {
                 $showurl = '<a href="http://www.amazon.co.jp/exec/obidos/ASIN/'.$product['asbncode'].'/'.$this->aid.'" target="_blank">';
                 $product['showimg'] = $showurl.'<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" /></a>';
                 $product['showtitle'] = $showurl.$product['title'].'</a>';
-                $product['button'] = $this->add_cart($asbncode);
+                $product['button'] = $this->add_cart($product['asbncode']);
             }else{
                 $product['showimg'] = '<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" />';
                 $product['showtitle'] = $product['title'];
