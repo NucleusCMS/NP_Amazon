@@ -6,11 +6,13 @@ class NP_Amazon extends NucleusPlugin {
     }
 
     function getAuthor() {
-        return 'nekhet';
+        return 'Misc authors';
+        //  nekhet,
     }
 
     function getURL() {
-        return 'http://nekhet.ddo.jp/item/1517';
+        return 'https://github.com/NucleusCMS/NP_Amazon';
+        // 'http://nekhet.ddo.jp/item/1517'
     }
 
     function getVersion() {
