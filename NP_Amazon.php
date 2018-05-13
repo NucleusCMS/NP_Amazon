@@ -1,4 +1,8 @@
 <?php
+/*
+  Todo: [保留中] PHP最低動作要件の変更(PHP5.2.0以上)をすることで添付のamazonフォルダを全削除できるので、コードを整理する。
+ */
+
 class NP_Amazon extends NucleusPlugin {
     const aws_version = '2011-08-01'; // https://docs.aws.amazon.com/ja_jp/AWSECommerceService/latest/DG/Versioning.html
     private $_active = FALSE;
@@ -19,7 +23,7 @@ class NP_Amazon extends NucleusPlugin {
     }
 
     function getVersion() {
-        return '0.6.1';
+        return '0.6.2';
     }
 
     function getDescription() {
