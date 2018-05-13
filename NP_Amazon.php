@@ -438,20 +438,13 @@ EOL;
 		sql_query($sql);
     }
 
-    function getAmazonData(&$product, $mode) {
-        if (!$this->getActive())
-            return;
-
-        $baseurl = "http://ecs.amazonaws.jp/onca/xml?";
-		$params["Service"] = "AWSECommerceService";
+    public function makeAmazonRequestURLWithSignature($params) {
+		$baseurl = "http://ecs.amazonaws.jp/onca/xml?";
+		$params["Service"]        = "AWSECommerceService";
+		$params["Version"]        = self::aws_version;
 		$params["AWSAccessKeyId"] = $this->atoken;
-		$params["Timestamp"] = gmdate("Y-m-d\TH:i:s\Z");
-		$params["Version"] = self::aws_version;
-		$params["AssociateTag"] = $this->aid;
-		$params["ItemId"] = $product['asbncode'];
-		$params["ItemPage"] = "1";
-		$params["Operation"] = "ItemLookup";
-		$params["ResponseGroup"] = "Small,ItemAttributes,OfferFull,Images,Similarities,Reviews";
+		$params["AssociateTag"]   = $this->aid;
+		$params["Timestamp"]      = gmdate("Y-m-d\TH:i:s\Z");
 
 		ksort($params);
 		$query = array();
@@ -469,14 +462,34 @@ EOL;
 		} else {
 			require_once('amazon/hmac_sha256.php');
 			$hmac_sha256 = new HMAC_SHA256($this->secret_key);
-	    $signature = base64_encode($hmac_sha256->hmac($string2sign));
+			$signature = base64_encode($hmac_sha256->hmac($string2sign));
 		}
 		$signature = str_replace("%7E", "~", rawurlencode($signature));
-		$request = $baseurl.$query."&Signature=".$signature;
+		return $baseurl.$query."&Signature=".$signature;
+	}
 
-		$xml = file_get_contents($request);
-        if ($xml === FALSE)
+    function getAmazonData(&$product, $mode) {
+        if (!$this->getActive())
             return;
+
+        // https://docs.aws.amazon.com/AWSECommerceService/latest/DG/ItemLookup.html
+        $params = array();
+		$params["ItemId"] = $product['asbncode'];
+		$params["ItemPage"] = "1";
+		$params["Operation"] = "ItemLookup";
+		$params["ResponseGroup"] = "Small,ItemAttributes,OfferFull,Images,Similarities,Reviews";
+
+		$request = $this->makeAmazonRequestURLWithSignature($params);
+		$xml = @file_get_contents($request);
+        if ($xml === FALSE) {
+            // APIの制限： 1秒間に１回までの制限がある
+            usleep(500000); // 0.5秒間待機します(500*1000マイクロ秒)
+            $request = $this->makeAmazonRequestURLWithSignature($params);
+            $xml = @file_get_contents($request);
+            if ($xml === FALSE) {
+                return; // 失敗したので取得をあきらめて関数を終了する
+            }
+        }
 
         if (function_exists('json_encode') && class_exists('SimpleXMLElement')) {
             $obj = new SimpleXMLElement($xml);
