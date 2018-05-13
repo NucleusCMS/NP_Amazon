@@ -31,6 +31,40 @@ class NP_Amazon extends NucleusPlugin {
     function getTableList() { return array( sql_table('plugin_amazon') ); }
     function getEventList() { return array('PreItem'); }
 
+    private function getCreateSQL() {
+        $table = sql_table('plugin_amazon');
+        $sql =<<<EOL
+            CREATE TABLE IF NOT EXISTS $table (
+                id           int(11)      NOT NULL auto_increment,
+                blogid       int(11)      NOT NULL default '1',
+                asbncode     VARCHAR(15)  NOT NULL default '0',
+                title        tinytext,
+                catalog      varchar(50)           default NULL,
+                media        varchar(50)           default NULL,
+                author       varchar(250)          default NULL,
+                manufacturer varchar(250)          default NULL,
+                listprice    varchar(50)           default NULL,
+                ourprice     varchar(50)           default NULL,
+                point        varchar(50)           default NULL,
+                releasedate  varchar(50)           default NULL,
+                availability varchar(50)           default NULL,
+                amazonrate   float                 default '0',
+                myrate       float                 default '0',
+                extradata    varchar(255)          default NULL,
+                used         enum('yes', 'no')     default 'no',
+                userdata     varchar(250)          default NULL,
+                date         varchar(50)           default NULL,
+                adddate      varchar(50)           default NULL,
+                similar      text                  default NULL,
+                imgsize      varchar(60)           default NULL,
+                img          enum('yes', 'no')     default 'no',
+                PRIMARY KEY (id),
+                UNIQUE(asbncode)
+            ) ENGINE=MyISAM
+EOL;
+        return $sql;
+    }
+
     function install() {
         global $DIR_MEDIA;
         $this->createOption("atoken", "Amazon Access Key ID:", "text", "");
@@ -41,34 +75,10 @@ class NP_Amazon extends NucleusPlugin {
         $this->createOption("encode", "エンコード選択", "select", "UTF-8","UTF-8|UTF-8|EUC-JP|EUC-JP");
 //        $this->createOption("xmlphp", "xml.phpのパス（NP_Amazon.phpと同じディレクトリに保存した場合は空白）", "text", "");
         $this->createOption("del_uninstall", "Delete tables on uninstall?", "yesno", "no");
-        $sql = "CREATE TABLE IF NOT EXISTS ".sql_table('plugin_amazon');
-        $sql .= "(id int(11) NOT NULL auto_increment,";
-        $sql .= " blogid int(11) NOT NULL default '1',";
-        $sql .= " asbncode VARCHAR(15) NOT NULL default '0',";
-        $sql .= " title tinytext,";
-        $sql .= " catalog varchar(50) default NULL,";
-        $sql .= " media varchar(50) default NULL,";
-        $sql .= " author varchar(250) default NULL,";
-        $sql .= " manufacturer varchar(250) default NULL,";
-        $sql .= " listprice varchar(50) default NULL,";
-        $sql .= " ourprice varchar(50) default NULL,";
-        $sql .= " point varchar(50) default NULL,";
-        $sql .= " releasedate varchar(50) default NULL,";
-        $sql .= " availability varchar(50) default NULL,";
-        $sql .= " amazonrate float default '0',";
-        $sql .= " myrate float default '0',";
-        $sql .= " extradata varchar(255) default NULL,";
-        $sql .= " used enum('yes', 'no') default 'no',";
-        $sql .= " userdata varchar(250) default NULL,";
-        $sql .= " date varchar(50) default NULL,";
-        $sql .= " adddate varchar(50) default NULL,";
-        $sql .= " similar text default NULL,";
-        $sql .= " imgsize varchar(60) default NULL,";
-        $sql .= " img enum('yes', 'no') default 'no',";
-        $sql .= " PRIMARY KEY (id),";
-        $sql .= " UNIQUE(asbncode) ENGINE=MyISAM)";
-        //sql_query($sql);
-		sql_query($sql);
+
+        // Database : create custum plugin table
+        $sql = $this->getCreateSQL();
+        sql_query($sql);
 
         $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like point";
         if(sql_query($sql) == "") {
