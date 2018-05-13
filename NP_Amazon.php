@@ -69,21 +69,7 @@ EOL;
         return $sql;
     }
 
-    function install() {
-        global $DIR_MEDIA;
-        $this->createOption("atoken", "Amazon Access Key ID:", "text", "");
-        $this->createOption("secret_key", "Secret Access Key:", "text", "");
-        $this->createOption("aid", "Amazon Associates ID:", "text", "");
-        $this->createOption("flashtime", "情報キャッシュ期間（Amazon Webサービス使用許諾条件に従うこと）", "select", "3600","1時間|3600|24時間|86400|1週間|604800|3カ月|7776000");
-
-        $this->createOption("encode", "エンコード選択", "select", "UTF-8","UTF-8|UTF-8|EUC-JP|EUC-JP");
-//        $this->createOption("xmlphp", "xml.phpのパス（NP_Amazon.phpと同じディレクトリに保存した場合は空白）", "text", "");
-        $this->createOption("del_uninstall", "Delete tables on uninstall?", "yesno", "no");
-
-        // Database : create custum plugin table
-        $sql = $this->getCreateSQL();
-        sql_query($sql);
-
+    private function updateTable() {
         $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like point";
         if(sql_query($sql) == "") {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
@@ -132,12 +118,46 @@ EOL;
         $cols = array('detailpageurl', 'smallimageurl', 'mediumimageurl', 'largeimageurl');
         foreach($cols as $colname) {
             $sql = sprintf("SHOW COLUMNS FROM `%s` like '%s'", sql_table('plugin_amazon'), $colname);
-            if(sql_query($sql) == "") {
+            $res = sql_query($sql);
+            if(!$res || !sql_fetch_object($res)) {
                 $sql = "ALTER TABLE ".sql_table('plugin_amazon');
                 $sql .= " ADD $colname text NOT NULL default ''";
                 sql_query($sql);
             }
         }
+    }
+
+    private function checkUpdateTable() {
+        $tablename = sql_table('plugin_amazon');
+        $sql = sprintf("SHOW TABLES LIKE '%s'", $tablename);
+        $res = sql_query($sql);
+        if(!$res || !sql_fetch_object($res)) {
+            return; // table not exist
+        }
+
+        $sql = "SHOW COLUMNS FROM ".$tablename." like largeimageurl";
+        $res = sql_query($sql);
+        if(!$res || !sql_fetch_object($res)) {
+            $this->updateTable();
+        }
+    }
+
+    function install() {
+        global $DIR_MEDIA;
+        $this->createOption("atoken", "Amazon Access Key ID:", "text", "");
+        $this->createOption("secret_key", "Secret Access Key:", "text", "");
+        $this->createOption("aid", "Amazon Associates ID:", "text", "");
+        $this->createOption("flashtime", "情報キャッシュ期間（Amazon Webサービス使用許諾条件に従うこと）", "select", "3600","1時間|3600|24時間|86400|1週間|604800|3カ月|7776000");
+
+        $this->createOption("encode", "エンコード選択", "select", "UTF-8","UTF-8|UTF-8|EUC-JP|EUC-JP");
+//        $this->createOption("xmlphp", "xml.phpのパス（NP_Amazon.phpと同じディレクトリに保存した場合は空白）", "text", "");
+        $this->createOption("del_uninstall", "Delete tables on uninstall?", "yesno", "no");
+
+        // Database : create custum plugin table
+        $sql = $this->getCreateSQL();
+        sql_query($sql);
+
+        $this->updateTable();
 
         if(!is_dir($DIR_MEDIA."aws")) {
             mkdir($DIR_MEDIA."aws", 0755);
@@ -160,6 +180,8 @@ EOL;
         global $CONF;
         $this->flashtime = $this->getOption("flashtime");
         $this->encode = $this->getOption("encode");
+
+        $this->checkUpdateTable();
 
 /*
         if($this->getOption("xmlphp") == "") {
@@ -537,7 +559,7 @@ EOL;
         return $similar;
     }
 
-    function getImages($product, $size) {
+    function getImages(&$product, $size) {
         global $CONF, $DIR_MEDIA;
         $amazonurl = 'http://images.amazon.com/images/P/';
         $result = "no";
@@ -576,6 +598,7 @@ EOL;
                 $width = $tmpsize[2];
                 $height = $tmpsize[3];
 				$noimgsize = 120;
+                $image_key = 'mediumimageurl';
                 break;
         }
 
@@ -588,8 +611,9 @@ EOL;
             $product['imgfile'] = $amazonurl. $imgfile;
             $product['attr'] = 'width="'.$width.'" height="'.$height.'"';
             $result = "yes";
-            if (!empty($image_key) && !empty($product[$image_key]))
+            if (!empty($image_key) && !empty($product[$image_key])) {
                 $product['imgfile'] = $product[$image_key];
+            }
         } else {
  //           $product['attr'] = 'width="50" height="60"';
             $product['imgfile'] = $noimg;
