@@ -183,15 +183,6 @@ EOL;
 
         $this->checkUpdateTable();
 
-/*
-        if($this->getOption("xmlphp") == "") {
-            $this->xmlphp = "xml.php";
-        }else{
-            $this->xmlphp = $this->getOption("xmlphp");
-        }
-*/
-        require_once('amazon/xml.php');
-
         $this->aid        = trim($this->getOption("aid"));
         $this->atoken     = trim($this->getOption("atoken"));
         $this->secret_key = trim($this->getOption("secret_key"));
@@ -462,9 +453,26 @@ EOL;
 		$xml = file_get_contents($request);
         if ($xml === FALSE)
             return;
-        $ews = XML_unserialize($xml);
-        $ews_item = &$ews['ItemLookupResponse']['Items']['Item'];
-        $ews = "";
+
+        if (function_exists('json_encode') && class_exists('SimpleXMLElement')) {
+            $obj = new SimpleXMLElement($xml);
+            $obj_item = $obj->Items->Item;
+            $json = json_encode($obj_item);
+            $ews_item = json_decode($json,TRUE);
+            unset($obj, $obj_item);
+        } else {
+/*
+        if($this->getOption("xmlphp") == "") {
+            $this->xmlphp = "xml.php";
+        }else{
+            $this->xmlphp = $this->getOption("xmlphp");
+        }
+*/
+            require_once('amazon/xml.php');
+            $ews = XML_unserialize($xml);
+            $ews_item = &$ews['ItemLookupResponse']['Items']['Item'];
+            unset($ews);
+        }
 
         if (empty($ews_item))
             return ;
