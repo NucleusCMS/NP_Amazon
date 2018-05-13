@@ -1,5 +1,6 @@
 <?php
 class NP_Amazon extends NucleusPlugin {
+    const aws_version = '2011-08-01'; // https://docs.aws.amazon.com/ja_jp/AWSECommerceService/latest/DG/Versioning.html
     private $_active = FALSE;
     function getActive() { return $this->_active; }
 
@@ -367,7 +368,7 @@ class NP_Amazon extends NucleusPlugin {
 		$params["Service"] = "AWSECommerceService";
 		$params["AWSAccessKeyId"] = $this->atoken;
 		$params["Timestamp"] = gmdate("Y-m-d\TH:i:s\Z");
-		$params["Version"] = "2009-03-31";
+		$params["Version"] = self::aws_version;
 		$params["AssociateTag"] = $this->aid;
 		$params["ItemId"] = $product['asbncode'];
 		$params["ItemPage"] = "1";
