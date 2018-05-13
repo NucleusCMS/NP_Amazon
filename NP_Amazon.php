@@ -214,6 +214,14 @@ EOL;
             $num = 3;
         }
 
+        if (!$this->isValidAccount()) {
+            global $member;
+            if (!$member->isLoggedIn() || !$member->isAdmin())
+               return "<!-- NP_Amazonの設定が未入力です。 -->";
+            return sprintf('<a href="%sindex.php?action=pluginoptions&amp;plugid=%d">%s</a>',
+                    $CONF['AdminURL'], $this->getID() ,"NP_Amazonの設定が未入力です。");
+        }
+
         $sql = "SELECT * FROM ".sql_table('plugin_amazon')." ORDER BY adddate DESC LIMIT $num";
         $result = sql_query($sql);
         while($product = sql_fetch_assoc($result)) {
@@ -258,6 +266,14 @@ EOL;
 
     function convertAsbn($matches) {
         global $CONF;
+        if (!$this->isValidAccount()) {
+            global $member;
+            if (!$member->isLoggedIn() || !$member->isAdmin())
+               return "<!-- NP_Amazonの設定が未入力です。 -->";
+            return sprintf('<a href="%sindex.php?action=pluginoptions&amp;plugid=%d">%s</a>',
+                    $CONF['AdminURL'], $this->getID() ,"NP_Amazonの設定が未入力です。");
+        }
+
         $late = 46;// 更新時間を何分前にするか
         list($asbncode, $imgsize, $similarnum, $template) = explode("|", $matches[1]);
         if(!$similarnum) {
