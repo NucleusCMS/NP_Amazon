@@ -58,6 +58,7 @@ class NP_Amazon extends NucleusPlugin {
                 similar      text                  default NULL,
                 imgsize      varchar(60)           default NULL,
                 img          enum('yes', 'no')     default 'no',
+                detailpageurl text        NOT NULL default '',
                 PRIMARY KEY (id),
                 UNIQUE(asbncode)
             ) ENGINE=MyISAM
@@ -123,6 +124,13 @@ EOL;
         $sql = "ALTER TABLE ".sql_table('plugin_amazon');
         $sql .= " CHANGE asbncode asbncode varchar(15)";
         sql_query($sql);
+
+        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like detailpageurl";
+        if(sql_query($sql) == "") {
+            $sql = "ALTER TABLE ".sql_table('plugin_amazon');
+            $sql .= " ADD detailpageurl text NOT NULL default ''";
+            sql_query($sql);
+        }
 
         if(!is_dir($DIR_MEDIA."aws")) {
             mkdir($DIR_MEDIA."aws", 0755);
@@ -267,7 +275,12 @@ EOL;
         }
 
         if(strstr($product['asbncode'], "none") == FALSE) {
-            $showurl = '<a href="http://www.amazon.co.jp/exec/obidos/ASIN/'.$product['asbncode'].'/'.$this->aid.'" target="_blank">';
+            if (empty($product['detailpageurl']))
+                $url = sprintf('http://www.amazon.co.jp/exec/obidos/ASIN/%s/%s', $product['asbncode'], $this->aid);
+            else
+                $url = $product['detailpageurl'];
+            $showurl = sprintf('<a href="%s" target="_blank">', $url);
+
             $product['showimg'] = $showurl.'<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" /></a>';
             $product['showtitle'] = $showurl.$product['title'].'</a>';
             $product['button'] = $this->add_cart($asbncode);
@@ -320,7 +333,9 @@ EOL;
         $sql = 'INSERT INTO ' . sql_table('plugin_amazon')
             . " (blogid, asbncode, title, catalog, media, author, manufacturer,"
             . " listprice, ourprice, point, releasedate, availability,"
-            . " amazonrate, myrate, similar, imgsize, date, adddate)"
+            . " amazonrate, myrate, similar, imgsize,"
+            . " detailpageurl,"
+            . " date, adddate)"
         . "VALUES ('".$blogid."',
         '".sql_real_escape_string($product['asbncode'])."',
         '".sql_real_escape_string($product['title'])."',
@@ -337,6 +352,7 @@ EOL;
 		'".sql_real_escape_string(floatval($product['myrate']))."',
         '".sql_real_escape_string($product['similar'])."',
 		'".sql_real_escape_string($product['imgsize'])."',
+		'".sql_real_escape_string($product['detailpageurl'])."',
         ".time().",".time().")";
 		//mktime()
         //$res = @sql_query($sql);
@@ -355,7 +371,7 @@ EOL;
         
 //		$product['date'] = mktime();
 		$product['date'] = time();
-		
+
 
         $sql = 'UPDATE '.sql_table('plugin_amazon')
             . " SET     ourprice='". sql_real_escape_string($product['ourprice']) . "',"
@@ -363,7 +379,8 @@ EOL;
             . "     availability='" . sql_real_escape_string($product['availability']) . "',"
             . "     similar='". sql_real_escape_string($product['similar']) . "',"
             . "     imgsize='". sql_real_escape_string($product['imgsize']) . "',"
-            . "     date='" . sql_real_escape_string($product['date'])  . "'"
+            . "     date='" . sql_real_escape_string($product['date'])  . "',"
+            . "     detailpageurl='" . sql_real_escape_string($product['detailpageurl'])  . "'"
             . " WHERE asbncode='" . sql_real_escape_string($product['asbncode'])."'";
 			//. " SET amazonrate='" . sql_real_escape_string($product['amazonrate']) . "',"
 //       sql_query($sql);*/
