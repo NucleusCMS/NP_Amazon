@@ -58,7 +58,10 @@ class NP_Amazon extends NucleusPlugin {
                 similar      text                  default NULL,
                 imgsize      varchar(60)           default NULL,
                 img          enum('yes', 'no')     default 'no',
-                detailpageurl text        NOT NULL default '',
+                detailpageurl  text       NOT NULL default '',
+                smallimageurl  text       NOT NULL default '',
+                mediumimageurl text       NOT NULL default '',
+                largeimageurl  text       NOT NULL default '',
                 PRIMARY KEY (id),
                 UNIQUE(asbncode)
             ) ENGINE=MyISAM
@@ -125,11 +128,15 @@ EOL;
         $sql .= " CHANGE asbncode asbncode varchar(15)";
         sql_query($sql);
 
-        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like detailpageurl";
-        if(sql_query($sql) == "") {
-            $sql = "ALTER TABLE ".sql_table('plugin_amazon');
-            $sql .= " ADD detailpageurl text NOT NULL default ''";
-            sql_query($sql);
+        // text not null default ''
+        $cols = array('detailpageurl', 'smallimageurl', 'mediumimageurl', 'largeimageurl');
+        foreach($cols as $colname) {
+            $sql = sprintf("SHOW COLUMNS FROM `%s` like '%s'", sql_table('plugin_amazon'), $colname);
+            if(sql_query($sql) == "") {
+                $sql = "ALTER TABLE ".sql_table('plugin_amazon');
+                $sql .= " ADD $colname text NOT NULL default ''";
+                sql_query($sql);
+            }
         }
 
         if(!is_dir($DIR_MEDIA."aws")) {
@@ -335,6 +342,7 @@ EOL;
             . " listprice, ourprice, point, releasedate, availability,"
             . " amazonrate, myrate, similar, imgsize,"
             . " detailpageurl,"
+            . " smallimageurl, mediumimageurl, largeimageurl,"
             . " date, adddate)"
         . "VALUES ('".$blogid."',
         '".sql_real_escape_string($product['asbncode'])."',
@@ -353,6 +361,9 @@ EOL;
         '".sql_real_escape_string($product['similar'])."',
 		'".sql_real_escape_string($product['imgsize'])."',
 		'".sql_real_escape_string($product['detailpageurl'])."',
+		'".sql_real_escape_string($product['smallimageurl'])."',
+		'".sql_real_escape_string($product['mediumimageurl'])."',
+		'".sql_real_escape_string($product['largeimageurl'])."',
         ".time().",".time().")";
 		//mktime()
         //$res = @sql_query($sql);
@@ -380,7 +391,10 @@ EOL;
             . "     similar='". sql_real_escape_string($product['similar']) . "',"
             . "     imgsize='". sql_real_escape_string($product['imgsize']) . "',"
             . "     date='" . sql_real_escape_string($product['date'])  . "',"
-            . "     detailpageurl='" . sql_real_escape_string($product['detailpageurl'])  . "'"
+            . "     detailpageurl='" . sql_real_escape_string($product['detailpageurl'])  . "',"
+            . "     smallimageurl='" . sql_real_escape_string($product['smallimageurl'])  . "',"
+            . "     mediumimageurl='" . sql_real_escape_string($product['mediumimageurl'])  . "',"
+            . "     largeimageurl='" . sql_real_escape_string($product['largeimageurl'])  . "'"
             . " WHERE asbncode='" . sql_real_escape_string($product['asbncode'])."'";
 			//. " SET amazonrate='" . sql_real_escape_string($product['amazonrate']) . "',"
 //       sql_query($sql);*/
@@ -435,6 +449,13 @@ EOL;
 
         if (!empty($ews_item['DetailPageURL']))
             $product['detailpageurl'] = (string) $ews_item['DetailPageURL'];
+        foreach(array('SmallImage', 'MediumImage', 'LargeImage') as $key0) {
+            $tmp_key = strtolower($key0) . 'url';
+            if (empty($ews_item[$key0]['URL']))
+                $product[$tmp_key] = '';
+            else
+                $product[$tmp_key] = (string) $ews_item[$key0]['URL'];
+        }
 
         if($mode == "new") {
             $product['title'] = $ews_item['ItemAttributes']['Title'];
@@ -522,18 +543,22 @@ EOL;
         $result = "no";
         $tmpsize = explode(",", $product['imgsize']);
 
+        $image_key = '';
+
         switch($size) {
             case 's':
                 $img = "_SCTHUMBZZZ_.jpg";
                 $width = $tmpsize[0];
                 $height = $tmpsize[1];
 				$noimgsize = 60;
+                $image_key = 'smallimageurl';
                 break;
             case 'm':
                 $img = "_SCMZZZZZZZ_.jpg";
                 $width = $tmpsize[2];
                 $height = $tmpsize[3];
 				$noimgsize = 120;
+                $image_key = 'mediumimageurl';
                 break;
             case 'l':
 /*////////change ma
@@ -544,6 +569,7 @@ EOL;
 				$width = 380;
 				$height = 380;
 				$noimgsize = 180;
+                $image_key = 'largeimageurl';
                 break;
             default:
                 $img = "_SCMZZZZZZZ_.jpg";
@@ -556,13 +582,14 @@ EOL;
 //        $noimg = "http://images-jp.amazon.com/images/G/09/x-locale/detail/thumb-no-image.gif";
 		$noimg = 'http://images-jp.amazon.com/images/G/09/nav2/dp/no-image-no-ciu._AA'. $noimgsize .'_.gif';
 
-
         $imgfile = $product['asbncode'] .'.09.'.$img;
 
         if($width != "") {
             $product['imgfile'] = $amazonurl. $imgfile;
             $product['attr'] = 'width="'.$width.'" height="'.$height.'"';
             $result = "yes";
+            if (!empty($image_key) && !empty($product[$image_key]))
+                $product['imgfile'] = $product[$image_key];
         } else {
  //           $product['attr'] = 'width="50" height="60"';
             $product['imgfile'] = $noimg;
