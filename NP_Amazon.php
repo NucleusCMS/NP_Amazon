@@ -70,40 +70,38 @@ EOL;
     }
 
     private function updateTable() {
-        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like point";
-        if(sql_query($sql) == "") {
+        if (!$this->existTable())
+            return ; // table not exist
+
+        if(!$this->existColumn('point')) {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD point varchar(50) default NULL";
             $sql .= " AFTER ourprice";
             sql_query($sql);
         }
 
-        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like releasedate";
-        if(sql_query($sql) == "") {
+        if(!$this->existColumn('releasedate')) {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD releasedate varchar(50) default NULL";
             $sql .= " AFTER point";
             sql_query($sql);
         }
 
-        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like userdata";
-        if(sql_query($sql) == "") {
+        if(!$this->existColumn('userdata')) {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD userdata varchar(250) default NULL";
             $sql .= " AFTER used";
             sql_query($sql);
         }
 
-        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like imgsize";
-        if(sql_query($sql) == "") {
+        if(!$this->existColumn('imgsize')) {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD imgsize varchar(60) default NULL";
             $sql .= " AFTER similar";
             sql_query($sql);
         }
 
-        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like extradata";
-        if(sql_query($sql) == "") {
+        if(!$this->existColumn('extradata')) {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD extradata varchar(255) default NULL";
             $sql .= " AFTER myrate";
@@ -117,9 +115,7 @@ EOL;
         // text not null default ''
         $cols = array('detailpageurl', 'smallimageurl', 'mediumimageurl', 'largeimageurl');
         foreach($cols as $colname) {
-            $sql = sprintf("SHOW COLUMNS FROM `%s` like '%s'", sql_table('plugin_amazon'), $colname);
-            $res = sql_query($sql);
-            if(!$res || !sql_fetch_object($res)) {
+            if(!$this->existColumn($colname)) {
                 $sql = "ALTER TABLE ".sql_table('plugin_amazon');
                 $sql .= " ADD $colname text NOT NULL default ''";
                 sql_query($sql);
@@ -127,18 +123,30 @@ EOL;
         }
     }
 
-    private function checkUpdateTable() {
+    protected function existTable() {
         $tablename = sql_table('plugin_amazon');
         $sql = sprintf("SHOW TABLES LIKE '%s'", $tablename);
         $res = sql_query($sql);
         if(!$res || !sql_fetch_object($res)) {
-            return; // table not exist
+            return false; // table not exist
         }
+        return true;
+    }
 
-        $sql = "SHOW COLUMNS FROM ".$tablename." like largeimageurl";
+    protected function existColumn($column_name) {
+        $tablename = sql_table('plugin_amazon');
+        $sql = sprintf("SHOW COLUMNS FROM `%s` LIKE '%s'", $tablename , $column_name);
         $res = sql_query($sql);
         if(!$res || !sql_fetch_object($res)) {
-            $this->updateTable();
+            return false; // column not exist
+        }
+        return true;
+    }
+
+    private function checkUpdateTable() {
+        if($this->existTable()) {
+            if(!$this->existColumn('largeimageurl'))
+                $this->updateTable();
         }
     }
 
