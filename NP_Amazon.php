@@ -1,5 +1,7 @@
 <?php
 class NP_Amazon extends NucleusPlugin {
+    private $_active = FALSE;
+    function getActive() { return $this->_active; }
 
     function getName() {
         return 'Amazon';
@@ -123,6 +125,11 @@ class NP_Amazon extends NucleusPlugin {
 		$this->deleteOption('del_uninstall');
     }
 
+    protected function isValidAccount() {
+        $invalid = empty($this->aid) || empty($this->atoken) || empty($this->secret_key);
+        return !$invalid;
+    }
+
     function init() {
         global $CONF;
         $this->flashtime = $this->getOption("flashtime");
@@ -137,14 +144,23 @@ class NP_Amazon extends NucleusPlugin {
 */
         require_once('amazon/xml.php');
 
-        if($this->getOption("aid") == "") {
-            $this->aid = "webservices-20";
-        }else{
-            $this->aid = $this->getOption("aid");
-        }
+        $this->aid        = trim($this->getOption("aid"));
+        $this->atoken     = trim($this->getOption("atoken"));
+        $this->secret_key = trim($this->getOption("secret_key"));
 
-        $this->atoken = $this->getOption("atoken");
-		$this->secret_key = $this->getOption("secret_key");
+        $this->_active = TRUE;
+        if (!$this->isValidAccount()) {
+            global $member;
+            $this->_active = FALSE;
+            if ($member->isLoggedIn()) {
+                $msg = 'NP_Amazonのアカウント設定がされていません';
+                if (class_exists('SYSTEMLOG'))
+                    SYSTEMLOG::addUnique('error', 'ERROR', $msg);
+                elseif (class_exists('ACTIONLOG') && method_exists('ACTIONLOG', 'addUnique'))
+                    ACTIONLOG::addUnique(0, $msg);
+            }
+            // Todo: Dispaly ADMIN message panel. // if ($CONF['UsingAdminArea'] && $member->isLoggedIn() && $member->isAdmin())
+        }
     }
 
     function doSkinVar($skinType, $imgsize, $num, $template) {
@@ -336,6 +352,9 @@ class NP_Amazon extends NucleusPlugin {
     }
 
     function getAmazonData($product, $mode) {
+        if (!$this->getActive())
+            return;
+
         $baseurl = "http://ecs.amazonaws.jp/onca/xml?";
 		$params["Service"] = "AWSECommerceService";
 		$params["AWSAccessKeyId"] = $this->atoken;
