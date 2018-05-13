@@ -305,7 +305,9 @@ class NP_Amazon extends NucleusPlugin {
             mb_convert_variables("EUC-JP", "UTF-8", $product);
         }
         $sql = 'INSERT INTO ' . sql_table('plugin_amazon')
-        . " (blogid, asbncode, title, catalog, media, author, manufacturer, listprice, ourprice, point, releasedate, availability, amazonrate, myrate, similar, imgsize, date, adddate)"
+            . " (blogid, asbncode, title, catalog, media, author, manufacturer,"
+            . " listprice, ourprice, point, releasedate, availability,"
+            . " amazonrate, myrate, similar, imgsize, date, adddate)"
         . "VALUES ('".$blogid."',
         '".sql_real_escape_string($product['asbncode'])."',
         '".sql_real_escape_string($product['title'])."',
@@ -318,11 +320,11 @@ class NP_Amazon extends NucleusPlugin {
         '".sql_real_escape_string($product['point'])."',
         '".sql_real_escape_string($product['releasedate'])."',
         '".sql_real_escape_string($product['availability'])."',
+		'".sql_real_escape_string(floatval($product['amazonrate']))."',
 		'".sql_real_escape_string(floatval($product['myrate']))."',
         '".sql_real_escape_string($product['similar'])."',
 		'".sql_real_escape_string($product['imgsize'])."',
         ".time().",".time().")";
-		//		'".sql_real_escape_string(floatval($product['amazonrate']))."',
 		//mktime()
         //$res = @sql_query($sql);
 		$res = @sql_query($sql);
@@ -353,7 +355,7 @@ class NP_Amazon extends NucleusPlugin {
 		sql_query($sql);
     }
 
-    function getAmazonData($product, $mode) {
+    function getAmazonData(&$product, $mode) {
         if (!$this->getActive())
             return;
 
