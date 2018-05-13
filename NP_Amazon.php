@@ -296,6 +296,8 @@ class NP_Amazon extends NucleusPlugin {
 
     function newData($product) {
         $this->getAmazonData($product, $mode = "new");
+        if (empty($product['detailpageurl']))
+            return ;
         $blogid = getBlogIDFromItemID($this->currentItem->itemid);
 //change ma cause by mktim
 //        $product['date'] = mktime();
@@ -334,6 +336,8 @@ class NP_Amazon extends NucleusPlugin {
 
     function updateData($product) {
         $this->getAmazonData($product, $mode = "update");
+        if (empty($product['detailpageurl']))
+            return ;
         if($this->encode == "EUC-JP") {
             mb_convert_variables("EUC-JP", "UTF-8", $product);
         }
@@ -390,10 +394,19 @@ class NP_Amazon extends NucleusPlugin {
 		}
 		$signature = str_replace("%7E", "~", rawurlencode($signature));
 		$request = $baseurl.$query."&Signature=".$signature;
+
 		$xml = file_get_contents($request);
+        if ($xml === FALSE)
+            return;
         $ews = XML_unserialize($xml);
         $ews_item = &$ews['ItemLookupResponse']['Items']['Item'];
         $ews = "";
+
+        if (empty($ews_item))
+            return ;
+
+        if (!empty($ews_item['DetailPageURL']))
+            $product['detailpageurl'] = (string) $ews_item['DetailPageURL'];
 
         if($mode == "new") {
             $product['title'] = $ews_item['ItemAttributes']['Title'];
