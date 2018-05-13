@@ -163,8 +163,10 @@ class NP_Amazon extends NucleusPlugin {
         }
     }
 
-    function doSkinVar($skinType, $imgsize, $num, $template) {
+    // doSkinVar($skinType, $imgsize, $num, $template)
+    function doSkinVar($skinType) {
         global $CONF;
+        list( , $imgsize, $num, $template) = func_get_args();
         if(!$imgsize) {
             $imgsize = "m";
         }
