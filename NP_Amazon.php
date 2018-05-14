@@ -1,7 +1,7 @@
 <?php
-/*
-  Todo: [保留中] PHP最低動作要件の変更(PHP5.2.0以上)をすることで添付のamazonフォルダを全削除できるので、コードを整理する。
- */
+
+// Todo: 還元制限額(\3000？)を超えた商品リンクの扱い。(売り上げても還元されないので注意)
+//       他のアフィリエイトの商品リンクに置き換えるなど. テンプレートで置き換えれるようになるといいかもしれない
 
 class NP_Amazon extends NucleusPlugin {
     const aws_version = '2011-08-01'; // https://docs.aws.amazon.com/ja_jp/AWSECommerceService/latest/DG/Versioning.html
@@ -23,7 +23,7 @@ class NP_Amazon extends NucleusPlugin {
     }
 
     function getVersion() {
-        return '0.6.2';
+        return '0.7.0';
     }
 
     function getDescription() {
@@ -33,7 +33,7 @@ class NP_Amazon extends NucleusPlugin {
     function supportsFeature($feature) { return in_array ($feature, array ('SqlTablePrefix', 'SqlApi')); }
 
     function getTableList() { return array( sql_table('plugin_amazon') ); }
-    function getEventList() { return array('PreItem'); }
+    function getEventList() { return array('PreItem', 'PrePluginOptionsEdit'); }
 
     private function getCreateSQL() {
         $table = sql_table('plugin_amazon');
@@ -169,8 +169,6 @@ EOL;
         $this->createOption("aid", "Amazon Associates ID:", "text", "");
         $this->createOption("flashtime", "情報キャッシュ期間（Amazon Webサービス使用許諾条件に従うこと）", "select", "3600","1時間|3600|24時間|86400|1週間|604800|3カ月|7776000");
 
-        $this->createOption("encode", "エンコード選択", "select", "UTF-8","UTF-8|UTF-8|EUC-JP|EUC-JP");
-//        $this->createOption("xmlphp", "xml.phpのパス（NP_Amazon.phpと同じディレクトリに保存した場合は空白）", "text", "");
         $this->createOption("del_uninstall", "Delete tables on uninstall?", "yesno", "no");
 
         // Database : create custum plugin table
@@ -196,10 +194,22 @@ EOL;
         return !$invalid;
     }
 
+    public function event_PrePluginOptionsEdit(&$data) {
+        if ($data['plugid'] != $this->getID())
+            return;
+        foreach($data['options'] as $option) {
+            if ($option['name'] == 'encode') {
+                // delete option : encode
+                $this->deleteOption('encode');
+                unset($data['options'][$option['oid']]);
+                break;
+            }
+        }
+    }
+
     function init() {
         global $CONF;
         $this->flashtime = $this->getOption("flashtime");
-        $this->encode = $this->getOption("encode");
 
         $this->checkUpdateTable();
 
@@ -220,6 +230,10 @@ EOL;
             }
             // Todo: Dispaly ADMIN message panel. // if ($CONF['UsingAdminArea'] && $member->isLoggedIn() && $member->isAdmin())
         }
+        if ($this->_active && version_compare(phpversion(), '5.2.0', '<'))
+            $this->_active = FALSE;
+        if (!function_exists('json_encode') || !class_exists('SimpleXMLElement'))
+            $this->_active = FALSE;
     }
 
     // doSkinVar($skinType, $imgsize, $num, $template)
@@ -375,16 +389,16 @@ EOL;
     }
 
     function newData($product) {
-        $this->getAmazonData($product, $mode = "new");
-        if (empty($product['detailpageurl']))
+        $product = $this->getAmazonData($product, $mode = "new");
+        if (empty($product) || empty($product['detailpageurl']))
             return ;
         $blogid = getBlogIDFromItemID($this->currentItem->itemid);
 //change ma cause by mktim
 //        $product['date'] = mktime();
 		$product['date'] = time();
 
-        if($this->encode == "EUC-JP") {
-            mb_convert_variables("EUC-JP", "UTF-8", $product);
+        if (_CHARSET != 'UTF-8') {
+            mb_convert_variables(_CHARSET, "UTF-8", $product);
         }
         $sql = 'INSERT INTO ' . sql_table('plugin_amazon')
             . " (blogid, asbncode, title, catalog, media, author, manufacturer,"
@@ -422,11 +436,11 @@ EOL;
     }
 
     function updateData($product) {
-        $this->getAmazonData($product, $mode = "update");
-        if (empty($product['detailpageurl']))
+        $product = $this->getAmazonData($product, $mode = "update");
+        if (empty($product) || empty($product['detailpageurl']))
             return ;
-        if($this->encode == "EUC-JP") {
-            mb_convert_variables("EUC-JP", "UTF-8", $product);
+        if (_CHARSET != "UTF-8") {
+            mb_convert_variables(_CHARSET, "UTF-8", $product);
         }
         
 //		$product['date'] = mktime();
@@ -469,20 +483,14 @@ EOL;
 		$query = implode("&", $query);
 
 		$string2sign = "GET\necs.amazonaws.jp\n/onca/xml\n".$query;
-		if (function_exists("hash_hmac")) {
-			$signature = base64_encode(hash_hmac("sha256", $string2sign, $this->secret_key, true));
-		} else {
-			require_once('amazon/hmac_sha256.php');
-			$hmac_sha256 = new HMAC_SHA256($this->secret_key);
-			$signature = base64_encode($hmac_sha256->hmac($string2sign));
-		}
+		$signature = base64_encode(hash_hmac("sha256", $string2sign, $this->secret_key, true));
 		$signature = str_replace("%7E", "~", rawurlencode($signature));
 		return $baseurl.$query."&Signature=".$signature;
 	}
 
-    function getAmazonData(&$product, $mode) {
+    function getAmazonData($product, $mode) {
         if (!$this->getActive())
-            return;
+            return array();
 
         // https://docs.aws.amazon.com/AWSECommerceService/latest/DG/ItemLookup.html
         $params = array();
@@ -494,37 +502,26 @@ EOL;
 		$request = $this->makeAmazonRequestURLWithSignature($params);
 		$xml = @file_get_contents($request);
         if ($xml === FALSE) {
+            // ネットに接続できない または 制限による503エラー または オプション設定値の誤入力
             // APIの制限： 1秒間に１回までの制限がある
             usleep(500000); // 0.5秒間待機します(500*1000マイクロ秒)
             $request = $this->makeAmazonRequestURLWithSignature($params);
             $xml = @file_get_contents($request);
             if ($xml === FALSE) {
-                return; // 失敗したので取得をあきらめて関数を終了する
+                return array(); // 失敗したので取得をあきらめて関数を終了する
             }
         }
 
-        if (function_exists('json_encode') && class_exists('SimpleXMLElement')) {
-            $obj = new SimpleXMLElement($xml);
-            $obj_item = $obj->Items->Item;
-            $json = json_encode($obj_item);
-            $ews_item = json_decode($json,TRUE);
-            unset($obj, $obj_item);
-        } else {
-/*
-        if($this->getOption("xmlphp") == "") {
-            $this->xmlphp = "xml.php";
-        }else{
-            $this->xmlphp = $this->getOption("xmlphp");
-        }
-*/
-            require_once('amazon/xml.php');
-            $ews = XML_unserialize($xml);
-            $ews_item = &$ews['ItemLookupResponse']['Items']['Item'];
-            unset($ews);
-        }
+        $obj = new SimpleXMLElement($xml);
+        if (!isset($obj->Items) || !isset($obj->Items->Item))
+            return array();
+        $obj_item = $obj->Items->Item;
+        $json = json_encode($obj_item);
+        $ews_item = json_decode($json,TRUE);
+        unset($obj, $obj_item);
 
         if (empty($ews_item))
-            return ;
+            return array();
 
         if (!empty($ews_item['DetailPageURL']))
             $product['detailpageurl'] = (string) $ews_item['DetailPageURL'];
@@ -600,6 +597,7 @@ EOL;
             }
             $product['imgsize'] .= $ews_item[$imgsize]['Width'] . "," . $ews_item[$imgsize]['Height'];
         }
+        return $product;
     }
 
     function convertSimilar($spdata, $num) {
@@ -745,7 +743,7 @@ FORM;
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=<?php echo $this->encode ?>" />
+<meta http-equiv="Content-Type" content="text/html; charset=<?php echo _CHARSET; ?>" />
 <title>Data edit page</title>
 <link rel="stylesheet" type="text/css" href="<?php echo $CONF['AdminURL']?>styles/bookmarklet.css" />
 </head>
