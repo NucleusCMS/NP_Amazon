@@ -1,20 +1,29 @@
 <?php
+
+// Todo: 還元制限額(\3000？)を超えた商品リンクの扱い。(売り上げても還元されないので注意)
+//       他のアフィリエイトの商品リンクに置き換えるなど. テンプレートで置き換えれるようになるといいかもしれない
+
 class NP_Amazon extends NucleusPlugin {
+    const aws_version = '2011-08-01'; // https://docs.aws.amazon.com/ja_jp/AWSECommerceService/latest/DG/Versioning.html
+    private $_active = FALSE;
+    function getActive() { return $this->_active; }
 
     function getName() {
         return 'Amazon';
     }
 
     function getAuthor() {
-        return 'nekhet';
+        return 'Misc authors';
+        //  nekhet,
     }
 
     function getURL() {
-        return 'http://nekhet.ddo.jp/item/1517';
+        return 'https://github.com/NucleusCMS/NP_Amazon';
+        // 'http://nekhet.ddo.jp/item/1517'
     }
 
     function getVersion() {
-        return '0.6.1';
+        return '0.7.0';
     }
 
     function getDescription() {
@@ -24,81 +33,79 @@ class NP_Amazon extends NucleusPlugin {
     function supportsFeature($feature) { return in_array ($feature, array ('SqlTablePrefix', 'SqlApi')); }
 
     function getTableList() { return array( sql_table('plugin_amazon') ); }
-    function getEventList() { return array('PreItem'); }
+    function getEventList() { return array('PreItem', 'PrePluginOptionsEdit'); }
 
-    function install() {
-        global $DIR_MEDIA;
-        $this->createOption("atoken", "Amazon Access Key ID:", "text", "");
-        $this->createOption("secret_key", "Secret Access Key:", "text", "");
-        $this->createOption("aid", "Amazon Associates ID:", "text", "");
-        $this->createOption("flashtime", "情報キャッシュ期間（Amazon Webサービス使用許諾条件に従うこと）", "select", "3600","1時間|3600|24時間|86400|1週間|604800|3カ月|7776000");
+    private function getCreateSQL() {
+        $table = sql_table('plugin_amazon');
+        $sql =<<<EOL
+            CREATE TABLE IF NOT EXISTS $table (
+                id           int(11)      NOT NULL auto_increment,
+                blogid       int(11)      NOT NULL default '1',
+                asbncode     VARCHAR(15)  NOT NULL default '0',
+                title        tinytext,
+                catalog      varchar(50)           default NULL,
+                media        varchar(50)           default NULL,
+                author       varchar(250)          default NULL,
+                manufacturer varchar(250)          default NULL,
+                listprice    varchar(50)           default NULL,
+                ourprice     varchar(50)           default NULL,
+                point        varchar(50)           default NULL,
+                releasedate  varchar(50)           default NULL,
+                availability varchar(50)           default NULL,
+                amazonrate   float                 default '0',
+                myrate       float                 default '0',
+                extradata    varchar(255)          default NULL,
+                used         enum('yes', 'no')     default 'no',
+                userdata     varchar(250)          default NULL,
+                date         varchar(50)           default NULL,
+                adddate      varchar(50)           default NULL,
+                similar      text                  default NULL,
+                imgsize      varchar(60)           default NULL,
+                img          enum('yes', 'no')     default 'no',
+                detailpageurl  text       NOT NULL default '',
+                smallimageurl  text       NOT NULL default '',
+                mediumimageurl text       NOT NULL default '',
+                largeimageurl  text       NOT NULL default '',
+                PRIMARY KEY (id),
+                UNIQUE(asbncode)
+            ) ENGINE=MyISAM
+EOL;
+        return $sql;
+    }
 
-        $this->createOption("encode", "エンコード選択", "select", "UTF-8","UTF-8|UTF-8|EUC-JP|EUC-JP");
-//        $this->createOption("xmlphp", "xml.phpのパス（NP_Amazon.phpと同じディレクトリに保存した場合は空白）", "text", "");
-        $this->createOption("del_uninstall", "Delete tables on uninstall?", "yesno", "no");
-        $sql = "CREATE TABLE IF NOT EXISTS ".sql_table('plugin_amazon');
-        $sql .= "(id int(11) NOT NULL auto_increment,";
-        $sql .= " blogid int(11) NOT NULL default '1',";
-        $sql .= " asbncode VARCHAR(15) NOT NULL default '0',";
-        $sql .= " title tinytext,";
-        $sql .= " catalog varchar(50) default NULL,";
-        $sql .= " media varchar(50) default NULL,";
-        $sql .= " author varchar(250) default NULL,";
-        $sql .= " manufacturer varchar(250) default NULL,";
-        $sql .= " listprice varchar(50) default NULL,";
-        $sql .= " ourprice varchar(50) default NULL,";
-        $sql .= " point varchar(50) default NULL,";
-        $sql .= " releasedate varchar(50) default NULL,";
-        $sql .= " availability varchar(50) default NULL,";
-        $sql .= " amazonrate float default '0',";
-        $sql .= " myrate float default '0',";
-        $sql .= " extradata varchar(255) default NULL,";
-        $sql .= " used enum('yes', 'no') default 'no',";
-        $sql .= " userdata varchar(250) default NULL,";
-        $sql .= " date varchar(50) default NULL,";
-        $sql .= " adddate varchar(50) default NULL,";
-        $sql .= " similar text default NULL,";
-        $sql .= " imgsize varchar(60) default NULL,";
-        $sql .= " img enum('yes', 'no') default 'no',";
-        $sql .= " PRIMARY KEY (id),";
-        $sql .= " UNIQUE(asbncode) ENGINE=MyISAM)";
-        //sql_query($sql);
-		sql_query($sql);
+    private function updateTable() {
+        if (!$this->existTable())
+            return ; // table not exist
 
-        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like point";
-        if(sql_query($sql) == "") {
+        if(!$this->existColumn('point')) {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD point varchar(50) default NULL";
             $sql .= " AFTER ourprice";
             sql_query($sql);
         }
 
-        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like releasedate";
-        if(sql_query($sql) == "") {
+        if(!$this->existColumn('releasedate')) {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD releasedate varchar(50) default NULL";
             $sql .= " AFTER point";
             sql_query($sql);
         }
 
-        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like userdata";
-        if(sql_query($sql) == "") {
+        if(!$this->existColumn('userdata')) {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD userdata varchar(250) default NULL";
             $sql .= " AFTER used";
             sql_query($sql);
         }
 
-        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like imgsize";
-        if(sql_query($sql) == "") {
+        if(!$this->existColumn('imgsize')) {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD imgsize varchar(60) default NULL";
             $sql .= " AFTER similar";
             sql_query($sql);
         }
 
-        $sql="SHOW COLUMNS FROM ".sql_table('plugin_amazon')." like extradata";
-        if(sql_query($sql) == "") {
+        if(!$this->existColumn('extradata')) {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
             $sql .= " ADD extradata varchar(255) default NULL";
             $sql .= " AFTER myrate";
@@ -108,6 +115,67 @@ class NP_Amazon extends NucleusPlugin {
         $sql = "ALTER TABLE ".sql_table('plugin_amazon');
         $sql .= " CHANGE asbncode asbncode varchar(15)";
         sql_query($sql);
+
+        // text not null default ''
+        $cols = array('detailpageurl', 'smallimageurl', 'mediumimageurl', 'largeimageurl');
+        foreach($cols as $colname) {
+            if(!$this->existColumn($colname)) {
+                $sql = "ALTER TABLE ".sql_table('plugin_amazon');
+                $sql .= " ADD $colname text NOT NULL default ''";
+                sql_query($sql);
+            }
+        }
+
+        // 値のない古いデータを更新リストへ送る
+        $where = sprintf(' WHERE date >= %d', time() - $this->flashtime);
+        $where .= " AND ( detailpageurl = '' OR ( ";
+        $where .= " smallimageurl = '' AND mediumimageurl = '' AND largeimageurl = ''";
+        $where .= ' ) )';
+        $query = sprintf('UPDATE `%s` SET date = %d', sql_table('plugin_amazon'), time() - $this->flashtime -1) . $where;
+        sql_query($query);
+    }
+
+    protected function existTable() {
+        $tablename = sql_table('plugin_amazon');
+        $sql = sprintf("SHOW TABLES LIKE '%s'", $tablename);
+        $res = sql_query($sql);
+        if(!$res || !sql_fetch_object($res)) {
+            return false; // table not exist
+        }
+        return true;
+    }
+
+    protected function existColumn($column_name) {
+        $tablename = sql_table('plugin_amazon');
+        $sql = sprintf("SHOW COLUMNS FROM `%s` LIKE '%s'", $tablename , $column_name);
+        $res = sql_query($sql);
+        if(!$res || !sql_fetch_object($res)) {
+            return false; // column not exist
+        }
+        return true;
+    }
+
+    private function checkUpdateTable() {
+        if($this->existTable()) {
+            if(!$this->existColumn('largeimageurl'))
+                $this->updateTable();
+        }
+    }
+
+    function install() {
+        global $DIR_MEDIA;
+        $this->createOption("atoken", "Amazon Access Key ID:", "text", "");
+        $this->createOption("secret_key", "Secret Access Key:", "text", "");
+        $this->createOption("aid", "Amazon Associates ID:", "text", "");
+        $this->createOption("flashtime", "情報キャッシュ期間（Amazon Webサービス使用許諾条件に従うこと）", "select", "3600","1時間|3600|24時間|86400|1週間|604800|3カ月|7776000");
+
+        $this->createOption("del_uninstall", "Delete tables on uninstall?", "yesno", "no");
+
+        // Database : create custum plugin table
+        $sql = $this->getCreateSQL();
+        sql_query($sql);
+
+        $this->updateTable();
 
         if(!is_dir($DIR_MEDIA."aws")) {
             mkdir($DIR_MEDIA."aws", 0755);
@@ -121,38 +189,71 @@ class NP_Amazon extends NucleusPlugin {
 		$this->deleteOption('del_uninstall');
     }
 
+    protected function isValidAccount() {
+        $invalid = empty($this->aid) || empty($this->atoken) || empty($this->secret_key);
+        return !$invalid;
+    }
+
+    public function event_PrePluginOptionsEdit(&$data) {
+        if ($data['plugid'] != $this->getID())
+            return;
+        foreach($data['options'] as $option) {
+            if ($option['name'] == 'encode') {
+                // delete option : encode
+                $this->deleteOption('encode');
+                unset($data['options'][$option['oid']]);
+                break;
+            }
+        }
+    }
+
     function init() {
         global $CONF;
         $this->flashtime = $this->getOption("flashtime");
-        $this->encode = $this->getOption("encode");
 
-/*
-        if($this->getOption("xmlphp") == "") {
-            $this->xmlphp = "xml.php";
-        }else{
-            $this->xmlphp = $this->getOption("xmlphp");
+        $this->checkUpdateTable();
+
+        $this->aid        = trim($this->getOption("aid"));
+        $this->atoken     = trim($this->getOption("atoken"));
+        $this->secret_key = trim($this->getOption("secret_key"));
+
+        $this->_active = TRUE;
+        if (!$this->isValidAccount()) {
+            global $member;
+            $this->_active = FALSE;
+            if ($member->isLoggedIn()) {
+                $msg = 'NP_Amazonのアカウント設定がされていません';
+                if (class_exists('SYSTEMLOG'))
+                    SYSTEMLOG::addUnique('error', 'ERROR', $msg);
+                elseif (class_exists('ACTIONLOG') && method_exists('ACTIONLOG', 'addUnique'))
+                    ACTIONLOG::addUnique(0, $msg);
+            }
+            // Todo: Dispaly ADMIN message panel. // if ($CONF['UsingAdminArea'] && $member->isLoggedIn() && $member->isAdmin())
         }
-*/
-        require_once('amazon/xml.php');
-
-        if($this->getOption("aid") == "") {
-            $this->aid = "webservices-20";
-        }else{
-            $this->aid = $this->getOption("aid");
-        }
-
-        $this->atoken = $this->getOption("atoken");
-		$this->secret_key = $this->getOption("secret_key");
+        if ($this->_active && version_compare(phpversion(), '5.2.0', '<'))
+            $this->_active = FALSE;
+        if (!function_exists('json_encode') || !class_exists('SimpleXMLElement'))
+            $this->_active = FALSE;
     }
 
-    function doSkinVar($skinType, $imgsize, $num, $template) {
+    // doSkinVar($skinType, $imgsize, $num, $template)
+    function doSkinVar($skinType) {
         global $CONF;
+        list( , $imgsize, $num, $template) = func_get_args();
         if(!$imgsize) {
             $imgsize = "m";
         }
 
         if(!$num) {
             $num = 3;
+        }
+
+        if (!$this->isValidAccount()) {
+            global $member;
+            if (!$member->isLoggedIn() || !$member->isAdmin())
+               return "<!-- NP_Amazonの設定が未入力です。 -->";
+            return sprintf('<a href="%sindex.php?action=pluginoptions&amp;plugid=%d">%s</a>',
+                    $CONF['AdminURL'], $this->getID() ,"NP_Amazonの設定が未入力です。");
         }
 
         $sql = "SELECT * FROM ".sql_table('plugin_amazon')." ORDER BY adddate DESC LIMIT $num";
@@ -168,12 +269,12 @@ class NP_Amazon extends NucleusPlugin {
                 $showurl = '<a href="http://www.amazon.co.jp/exec/obidos/ASIN/'.$product['asbncode'].'/'.$this->aid.'" target="_blank">';
                 $product['showimg'] = $showurl.'<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" /></a>';
                 $product['showtitle'] = $showurl.$product['title'].'</a>';
-                $product['button'] = $this->add_cart($asbncode);
+                $product['button'] = $this->add_cart($product['asbncode']);
             }else{
                 $product['showimg'] = '<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" />';
                 $product['showtitle'] = $product['title'];
             }
-            //$product['amazonratemark'] = $this->mkRating($product['amazonrate']);
+            $product['amazonratemark'] = $this->mkRating($product['amazonrate']);
             $product['myratemark'] = $this->mkRating($product['myrate']);
             $product['edit'] = $this->canEdit()?'<a href="'.$CONF['ActionURL'] . '?action=plugin&amp;name=Amazon&amp;type=edit&amp;asbncode='.$product['asbncode'].'" target="_blank">edit</a>':'';
             $this->getTemplate($template);
@@ -199,6 +300,14 @@ class NP_Amazon extends NucleusPlugin {
 
     function convertAsbn($matches) {
         global $CONF;
+        if (!$this->isValidAccount()) {
+            global $member;
+            if (!$member->isLoggedIn() || !$member->isAdmin())
+               return "<!-- NP_Amazonの設定が未入力です。 -->";
+            return sprintf('<a href="%sindex.php?action=pluginoptions&amp;plugid=%d">%s</a>',
+                    $CONF['AdminURL'], $this->getID() ,"NP_Amazonの設定が未入力です。");
+        }
+
         $late = 46;// 更新時間を何分前にするか
         list($asbncode, $imgsize, $similarnum, $template) = explode("|", $matches[1]);
         if(!$similarnum) {
@@ -236,7 +345,12 @@ class NP_Amazon extends NucleusPlugin {
         }
 
         if(strstr($product['asbncode'], "none") == FALSE) {
-            $showurl = '<a href="http://www.amazon.co.jp/exec/obidos/ASIN/'.$product['asbncode'].'/'.$this->aid.'" target="_blank">';
+            if (empty($product['detailpageurl']))
+                $url = sprintf('http://www.amazon.co.jp/exec/obidos/ASIN/%s/%s', $product['asbncode'], $this->aid);
+            else
+                $url = $product['detailpageurl'];
+            $showurl = sprintf('<a href="%s" target="_blank">', $url);
+
             $product['showimg'] = $showurl.'<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" /></a>';
             $product['showtitle'] = $showurl.$product['title'].'</a>';
             $product['button'] = $this->add_cart($asbncode);
@@ -275,17 +389,24 @@ class NP_Amazon extends NucleusPlugin {
     }
 
     function newData($product) {
-        $this->getAmazonData($product, $mode = "new");
+        $product = $this->getAmazonData($product, $mode = "new");
+        if (empty($product) || empty($product['detailpageurl']))
+            return ;
         $blogid = getBlogIDFromItemID($this->currentItem->itemid);
 //change ma cause by mktim
 //        $product['date'] = mktime();
 		$product['date'] = time();
 
-        if($this->encode == "EUC-JP") {
-            mb_convert_variables("EUC-JP", "UTF-8", $product);
+        if (_CHARSET != 'UTF-8') {
+            mb_convert_variables(_CHARSET, "UTF-8", $product);
         }
         $sql = 'INSERT INTO ' . sql_table('plugin_amazon')
-        . " (blogid, asbncode, title, catalog, media, author, manufacturer, listprice, ourprice, point, releasedate, availability, amazonrate, myrate, similar, imgsize, date, adddate)"
+            . " (blogid, asbncode, title, catalog, media, author, manufacturer,"
+            . " listprice, ourprice, point, releasedate, availability,"
+            . " amazonrate, myrate, similar, imgsize,"
+            . " detailpageurl,"
+            . " smallimageurl, mediumimageurl, largeimageurl,"
+            . " date, adddate)"
         . "VALUES ('".$blogid."',
         '".sql_real_escape_string($product['asbncode'])."',
         '".sql_real_escape_string($product['title'])."',
@@ -298,11 +419,15 @@ class NP_Amazon extends NucleusPlugin {
         '".sql_real_escape_string($product['point'])."',
         '".sql_real_escape_string($product['releasedate'])."',
         '".sql_real_escape_string($product['availability'])."',
+		'".sql_real_escape_string(floatval($product['amazonrate']))."',
 		'".sql_real_escape_string(floatval($product['myrate']))."',
         '".sql_real_escape_string($product['similar'])."',
 		'".sql_real_escape_string($product['imgsize'])."',
+		'".sql_real_escape_string($product['detailpageurl'])."',
+		'".sql_real_escape_string($product['smallimageurl'])."',
+		'".sql_real_escape_string($product['mediumimageurl'])."',
+		'".sql_real_escape_string($product['largeimageurl'])."',
         ".time().",".time().")";
-		//		'".sql_real_escape_string(floatval($product['amazonrate']))."',
 		//mktime()
         //$res = @sql_query($sql);
 		$res = @sql_query($sql);
@@ -311,14 +436,16 @@ class NP_Amazon extends NucleusPlugin {
     }
 
     function updateData($product) {
-        $this->getAmazonData($product, $mode = "update");
-        if($this->encode == "EUC-JP") {
-            mb_convert_variables("EUC-JP", "UTF-8", $product);
+        $product = $this->getAmazonData($product, $mode = "update");
+        if (empty($product) || empty($product['detailpageurl']))
+            return ;
+        if (_CHARSET != "UTF-8") {
+            mb_convert_variables(_CHARSET, "UTF-8", $product);
         }
         
 //		$product['date'] = mktime();
 		$product['date'] = time();
-		
+
 
         $sql = 'UPDATE '.sql_table('plugin_amazon')
             . " SET     ourprice='". sql_real_escape_string($product['ourprice']) . "',"
@@ -326,24 +453,24 @@ class NP_Amazon extends NucleusPlugin {
             . "     availability='" . sql_real_escape_string($product['availability']) . "',"
             . "     similar='". sql_real_escape_string($product['similar']) . "',"
             . "     imgsize='". sql_real_escape_string($product['imgsize']) . "',"
-            . "     date='" . sql_real_escape_string($product['date'])  . "'"
+            . "     date='" . sql_real_escape_string($product['date'])  . "',"
+            . "     detailpageurl='" . sql_real_escape_string($product['detailpageurl'])  . "',"
+            . "     smallimageurl='" . sql_real_escape_string($product['smallimageurl'])  . "',"
+            . "     mediumimageurl='" . sql_real_escape_string($product['mediumimageurl'])  . "',"
+            . "     largeimageurl='" . sql_real_escape_string($product['largeimageurl'])  . "'"
             . " WHERE asbncode='" . sql_real_escape_string($product['asbncode'])."'";
 			//. " SET amazonrate='" . sql_real_escape_string($product['amazonrate']) . "',"
 //       sql_query($sql);*/
 		sql_query($sql);
     }
 
-    function getAmazonData($product, $mode) {
-        $baseurl = "http://ecs.amazonaws.jp/onca/xml?";
-		$params["Service"] = "AWSECommerceService";
+    public function makeAmazonRequestURLWithSignature($params) {
+		$baseurl = "http://ecs.amazonaws.jp/onca/xml?";
+		$params["Service"]        = "AWSECommerceService";
+		$params["Version"]        = self::aws_version;
 		$params["AWSAccessKeyId"] = $this->atoken;
-		$params["Timestamp"] = gmdate("Y-m-d\TH:i:s\Z");
-		$params["Version"] = "2009-03-31";
-		$params["AssociateTag"] = $this->aid;
-		$params["ItemId"] = $product['asbncode'];
-		$params["ItemPage"] = "1";
-		$params["Operation"] = "ItemLookup";
-		$params["ResponseGroup"] = "Small,ItemAttributes,OfferFull,Images,Similarities,Reviews";
+		$params["AssociateTag"]   = $this->aid;
+		$params["Timestamp"]      = gmdate("Y-m-d\TH:i:s\Z");
 
 		ksort($params);
 		$query = array();
@@ -356,19 +483,55 @@ class NP_Amazon extends NucleusPlugin {
 		$query = implode("&", $query);
 
 		$string2sign = "GET\necs.amazonaws.jp\n/onca/xml\n".$query;
-		if (function_exists("hash_hmac")) {
-			$signature = base64_encode(hash_hmac("sha256", $string2sign, $this->secret_key, true));
-		} else {
-			require_once('amazon/hmac_sha256.php');
-			$hmac_sha256 = new HMAC_SHA256($this->secret_key);
-	    $signature = base64_encode($hmac_sha256->hmac($string2sign));
-		}
+		$signature = base64_encode(hash_hmac("sha256", $string2sign, $this->secret_key, true));
 		$signature = str_replace("%7E", "~", rawurlencode($signature));
-		$request = $baseurl.$query."&Signature=".$signature;
-		$xml = file_get_contents($request);
-        $ews = XML_unserialize($xml);
-        $ews_item = &$ews['ItemLookupResponse']['Items']['Item'];
-        $ews = "";
+		return $baseurl.$query."&Signature=".$signature;
+	}
+
+    function getAmazonData($product, $mode) {
+        if (!$this->getActive())
+            return array();
+
+        // https://docs.aws.amazon.com/AWSECommerceService/latest/DG/ItemLookup.html
+        $params = array();
+		$params["ItemId"] = $product['asbncode'];
+		$params["ItemPage"] = "1";
+		$params["Operation"] = "ItemLookup";
+		$params["ResponseGroup"] = "Small,ItemAttributes,OfferFull,Images,Similarities,Reviews";
+
+		$request = $this->makeAmazonRequestURLWithSignature($params);
+		$xml = @file_get_contents($request);
+        if ($xml === FALSE) {
+            // ネットに接続できない または 制限による503エラー または オプション設定値の誤入力
+            // APIの制限： 1秒間に１回までの制限がある
+            usleep(500000); // 0.5秒間待機します(500*1000マイクロ秒)
+            $request = $this->makeAmazonRequestURLWithSignature($params);
+            $xml = @file_get_contents($request);
+            if ($xml === FALSE) {
+                return array(); // 失敗したので取得をあきらめて関数を終了する
+            }
+        }
+
+        $obj = new SimpleXMLElement($xml);
+        if (!isset($obj->Items) || !isset($obj->Items->Item))
+            return array();
+        $obj_item = $obj->Items->Item;
+        $json = json_encode($obj_item);
+        $ews_item = json_decode($json,TRUE);
+        unset($obj, $obj_item);
+
+        if (empty($ews_item))
+            return array();
+
+        if (!empty($ews_item['DetailPageURL']))
+            $product['detailpageurl'] = (string) $ews_item['DetailPageURL'];
+        foreach(array('SmallImage', 'MediumImage', 'LargeImage') as $key0) {
+            $tmp_key = strtolower($key0) . 'url';
+            if (empty($ews_item[$key0]['URL']))
+                $product[$tmp_key] = '';
+            else
+                $product[$tmp_key] = (string) $ews_item[$key0]['URL'];
+        }
 
         if($mode == "new") {
             $product['title'] = $ews_item['ItemAttributes']['Title'];
@@ -406,7 +569,11 @@ class NP_Amazon extends NucleusPlugin {
         }
 
         $product['ourprice'] = $ews_item['Offers']['Offer']['OfferListing']['Price']['FormattedPrice'];
-        //$product['amazonrate'] = $ews_item['CustomerReviews']['AverageRating'];
+
+        // 2010/11/08 に CustomerReviews はリンクのみ返すように仕様変更された。
+        //   CustomerReviews/IFrameURL , CustomerReviews/HasReviews
+        $product['amazonrate'] = 0; //$ews_item['CustomerReviews']['AverageRating'];
+
         $product['availability'] = $ews_item['Offers']['Offer']['OfferListing']['Availability'];
         $product['point'] = $ews_item['Offers']['Offer']['LoyaltyPoints']['TypicalRedemptionValue']['Amount'];
 
@@ -430,6 +597,7 @@ class NP_Amazon extends NucleusPlugin {
             }
             $product['imgsize'] .= $ews_item[$imgsize]['Width'] . "," . $ews_item[$imgsize]['Height'];
         }
+        return $product;
     }
 
     function convertSimilar($spdata, $num) {
@@ -450,11 +618,13 @@ class NP_Amazon extends NucleusPlugin {
         return $similar;
     }
 
-    function getImages($product, $size) {
+    function getImages(&$product, $size) {
         global $CONF, $DIR_MEDIA;
         $amazonurl = 'http://images.amazon.com/images/P/';
         $result = "no";
         $tmpsize = explode(",", $product['imgsize']);
+
+        $image_key = '';
 
         switch($size) {
             case 's':
@@ -462,12 +632,14 @@ class NP_Amazon extends NucleusPlugin {
                 $width = $tmpsize[0];
                 $height = $tmpsize[1];
 				$noimgsize = 60;
+                $image_key = 'smallimageurl';
                 break;
             case 'm':
                 $img = "_SCMZZZZZZZ_.jpg";
                 $width = $tmpsize[2];
                 $height = $tmpsize[3];
 				$noimgsize = 120;
+                $image_key = 'mediumimageurl';
                 break;
             case 'l':
 /*////////change ma
@@ -478,18 +650,19 @@ class NP_Amazon extends NucleusPlugin {
 				$width = 380;
 				$height = 380;
 				$noimgsize = 180;
+                $image_key = 'largeimageurl';
                 break;
             default:
                 $img = "_SCMZZZZZZZ_.jpg";
                 $width = $tmpsize[2];
                 $height = $tmpsize[3];
 				$noimgsize = 120;
+                $image_key = 'mediumimageurl';
                 break;
         }
 
 //        $noimg = "http://images-jp.amazon.com/images/G/09/x-locale/detail/thumb-no-image.gif";
 		$noimg = 'http://images-jp.amazon.com/images/G/09/nav2/dp/no-image-no-ciu._AA'. $noimgsize .'_.gif';
-
 
         $imgfile = $product['asbncode'] .'.09.'.$img;
 
@@ -497,6 +670,9 @@ class NP_Amazon extends NucleusPlugin {
             $product['imgfile'] = $amazonurl. $imgfile;
             $product['attr'] = 'width="'.$width.'" height="'.$height.'"';
             $result = "yes";
+            if (!empty($image_key) && !empty($product[$image_key])) {
+                $product['imgfile'] = $product[$image_key];
+            }
         } else {
  //           $product['attr'] = 'width="50" height="60"';
             $product['imgfile'] = $noimg;
@@ -504,7 +680,7 @@ class NP_Amazon extends NucleusPlugin {
     }
 
 	function mkRating($rate) {
-		if($rate == 0 || $rate == "") {
+		if(empty($rate) || $rate == 0 || $rate == "") {
 			$rating = '0-0';
 		} elseif($rate >= 0 && $rate < 1) {
 			$rating = '0-0';
@@ -567,7 +743,7 @@ FORM;
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=<?php echo $this->encode ?>" />
+<meta http-equiv="Content-Type" content="text/html; charset=<?php echo _CHARSET; ?>" />
 <title>Data edit page</title>
 <link rel="stylesheet" type="text/css" href="<?php echo $CONF['AdminURL']?>styles/bookmarklet.css" />
 </head>
@@ -755,7 +931,7 @@ if(hsc($row->img) == "yes") {
 				$this->template_asbn .= '<%ourprice%>&nbsp;（Amazon価格）<br />';
 				$this->template_asbn .= '<%point%>&nbsp;（Amazonポイント）<br />';
 				$this->template_asbn .= '<img src="<%myratemark%>" title="<%myrate%>" alt="<%myrate%>" />&nbsp;（私のおすすめ度）<br />';
-				$this->template_asbn .= '<img src="<%amazonratemark%>" alt="<%amazonrate%>" title="<%amazonrate%>" />&nbsp;（Amazonおすすめ度）<br />';
+//				$this->template_asbn .= '<img src="<%amazonratemark%>" alt="<%amazonrate%>" title="<%amazonrate%>" />&nbsp;（Amazonおすすめ度）<br />';
 				$this->template_asbn .= '<%media%><br />';
 				$this->template_asbn .= '<%availability%><br />';
 				$this->template_asbn .= '（価格・在庫状況は<%date%>現在）<br />';
