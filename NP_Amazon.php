@@ -285,7 +285,7 @@ EOL;
 
     function event_PreItem($data) {
         $preg_expr = "#<\%amazon\((.*?)\)%\>#i";
-        $this->currentItem = &$data["item"];
+        $this->currentItem = &$data['item'];
 
 //change ma cause array problem
 		$param = array(&$this, 'convertAsbn');
@@ -315,7 +315,7 @@ EOL;
         }elseif($similarnum > 5) {
             $similarnum = 5;
         }
-        $asbncode = str_replace(array("-","ISBN"),"",$asbncode);
+        $asbncode = str_replace(array('-','ISBN'),'',$asbncode);
         if($asbncode == "none") {
             $itemid = $this->currentItem->itemid;
             $blogid = getBlogIDFromItemID($itemid);
@@ -601,19 +601,21 @@ EOL;
     }
 
     function convertSimilar($spdata, $num) {
-        if($spdata != "") {
-            $max = $num;
-            $sp = explode('|', $spdata);
-            if(count($sp) < $num) {
-                $max = count($sp);
-            }
+        
+        if($spdata == '') return '';
+        
+        $max = $num;
+        $sp = explode('|', $spdata);
+        if(count($sp) < $num) {
+            $max = count($sp);
+        }
 
-            $i = 0;
-            while($i < $max) {
-                list($asbncode, $title) = explode(":", $sp[$i]);
-                $similar .= '・<a href="http://www.amazon.co.jp/exec/obidos/ASIN/'.$asbncode.'/'.$this->aid.'" target="_blank">'.$title.'</a><br />';
-                $i = $i + 1;
-            }
+        $i = 0;
+        $similar = '';
+        while($i < $max) {
+            list($asbncode, $title) = explode(":", $sp[$i]);
+            $similar .= '・<a href="http://www.amazon.co.jp/exec/obidos/ASIN/'.$asbncode.'/'.$this->aid.'" target="_blank">'.$title.'</a><br />';
+            $i = $i + 1;
         }
         return $similar;
     }
