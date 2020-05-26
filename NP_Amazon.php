@@ -74,8 +74,9 @@ EOL;
     }
 
     private function updateTable() {
-        if (!$this->existTable())
-            return ; // table not exist
+        if (!$this->existTable()) {
+            return;
+        } // table not exist
 
         if(!$this->existColumn('point')) {
             $sql = "ALTER TABLE ".sql_table('plugin_amazon');
@@ -167,23 +168,28 @@ EOL;
         $this->createOption("atoken", "Amazon Access Key ID:", "text", "");
         $this->createOption("secret_key", "Secret Access Key:", "text", "");
         $this->createOption("aid", "Amazon Associates ID:", "text", "");
-        $this->createOption("flashtime", "情報キャッシュ期間（Amazon Webサービス使用許諾条件に従うこと）", "select", "3600","1時間|3600|24時間|86400|1週間|604800|3カ月|7776000");
+        $this->createOption(
+            'flashtime'
+            , "情報キャッシュ期間（Amazon Webサービス使用許諾条件に従うこと）"
+            , "select"
+            , "3600"
+            ,"1時間|3600|24時間|86400|1週間|604800|3カ月|7776000"
+        );
 
         $this->createOption("del_uninstall", "Delete tables on uninstall?", "yesno", "no");
 
         // Database : create custum plugin table
-        $sql = $this->getCreateSQL();
-        sql_query($sql);
+        sql_query($this->getCreateSQL());
 
         $this->updateTable();
 
-        if(!is_dir($DIR_MEDIA."aws")) {
+        if(!is_dir($DIR_MEDIA.'aws')) {
             mkdir($DIR_MEDIA."aws", 0755);
         }
     }
 
     function uninstall() {
-        if($this->getOption('del_uninstall') == "yes") {
+        if($this->getOption('del_uninstall') === 'yes') {
             sql_query("DROP table ".sql_table('plugin_amazon'));
         }
 		$this->deleteOption('del_uninstall');
@@ -195,10 +201,11 @@ EOL;
     }
 
     public function event_PrePluginOptionsEdit(&$data) {
-        if ($data['plugid'] != $this->getID())
+        if ($data['plugid'] != $this->getID()) {
             return;
+        }
         foreach($data['options'] as $option) {
-            if ($option['name'] == 'encode') {
+            if ($option['name'] === 'encode') {
                 // delete option : encode
                 $this->deleteOption('encode');
                 unset($data['options'][$option['oid']]);
@@ -208,7 +215,6 @@ EOL;
     }
 
     function init() {
-        global $CONF;
         $this->flashtime = $this->getOption("flashtime");
 
         $this->checkUpdateTable();
@@ -223,17 +229,20 @@ EOL;
             $this->_active = FALSE;
             if ($member->isLoggedIn()) {
                 $msg = 'NP_Amazonのアカウント設定がされていません';
-                if (class_exists('SYSTEMLOG'))
+                if (class_exists('SYSTEMLOG')) {
                     SYSTEMLOG::addUnique('error', 'ERROR', $msg);
-                elseif (class_exists('ACTIONLOG') && method_exists('ACTIONLOG', 'addUnique'))
+                } elseif (class_exists('ACTIONLOG') && method_exists('ACTIONLOG', 'addUnique')) {
                     ACTIONLOG::addUnique(0, $msg);
+                }
             }
             // Todo: Dispaly ADMIN message panel. // if ($CONF['UsingAdminArea'] && $member->isLoggedIn() && $member->isAdmin())
         }
-        if ($this->_active && version_compare(phpversion(), '5.2.0', '<'))
+        if ($this->_active && version_compare(phpversion(), '5.2.0', '<')) {
             $this->_active = FALSE;
-        if (!function_exists('json_encode') || !class_exists('SimpleXMLElement'))
+        }
+        if (!function_exists('json_encode') || !class_exists('SimpleXMLElement')) {
             $this->_active = FALSE;
+        }
     }
 
     // doSkinVar($skinType, $imgsize, $num, $template)
@@ -250,8 +259,9 @@ EOL;
 
         if (!$this->isValidAccount()) {
             global $member;
-            if (!$member->isLoggedIn() || !$member->isAdmin())
-               return "<!-- NP_Amazonの設定が未入力です。 -->";
+            if (!$member->isLoggedIn() || !$member->isAdmin()) {
+                return "<!-- NP_Amazonの設定が未入力です。 -->";
+            }
             return sprintf('<a href="%sindex.php?action=pluginoptions&amp;plugid=%d">%s</a>',
                     $CONF['AdminURL'], $this->getID() ,"NP_Amazonの設定が未入力です。");
         }
@@ -302,8 +312,9 @@ EOL;
         global $CONF;
         if (!$this->isValidAccount()) {
             global $member;
-            if (!$member->isLoggedIn() || !$member->isAdmin())
-               return "<!-- NP_Amazonの設定が未入力です。 -->";
+            if (!$member->isLoggedIn() || !$member->isAdmin()) {
+                return "<!-- NP_Amazonの設定が未入力です。 -->";
+            }
             return sprintf('<a href="%sindex.php?action=pluginoptions&amp;plugid=%d">%s</a>',
                     $CONF['AdminURL'], $this->getID() ,"NP_Amazonの設定が未入力です。");
         }
@@ -316,7 +327,7 @@ EOL;
             $similarnum = 5;
         }
         $asbncode = str_replace(array('-','ISBN'),'',$asbncode);
-        if($asbncode == "none") {
+        if($asbncode === "none") {
             $itemid = $this->currentItem->itemid;
             $blogid = getBlogIDFromItemID($itemid);
             $asbncode = "none".$blogid.$itemid;
@@ -340,15 +351,16 @@ EOL;
         $product['date'] = date('n月j日 G:i', $product['date']);
         $this->getImages($product, $imgsize);
 
-        if($product['catalog'] == "Book" or $product['catalog'] == "Music" or $product['catalog'] == "DVD") {
+        if($product['catalog'] === 'Book' || $product['catalog'] === 'Music' || $product['catalog'] === 'DVD') {
             $product['imgstyle'] = "class='imgshadow'";
         }
 
-        if(strstr($product['asbncode'], "none") == FALSE) {
-            if (empty($product['detailpageurl']))
+        if(strstr($product['asbncode'], 'none') == false) {
+            if (empty($product['detailpageurl'])) {
                 $url = sprintf('http://www.amazon.co.jp/exec/obidos/ASIN/%s/%s', $product['asbncode'], $this->aid);
-            else
+            } else {
                 $url = $product['detailpageurl'];
+            }
             $showurl = sprintf('<a href="%s" target="_blank">', $url);
 
             $product['showimg'] = $showurl.'<img src="'.$product['imgfile'].'" '.$product['attr'].' border="0" '.$product['imgstyle'].' alt="'.$product['title'].'" /></a>';
@@ -360,25 +372,25 @@ EOL;
         }
 
         $product['similars'] = $this->convertSimilar($product['similar'], $similarnum);
-        if($product['similars'] != "") {
+        if($product['similars'] != '') {
             $product['similars'] = 'Amazon関連商品<br />'.$product['similars'];
         }
 
         $product['amazonratemark'] = $this->mkRating($product['amazonrate']);
         $product['myratemark'] = $this->mkRating($product['myrate']);
 
-        if($product['point'] == "") {
+        if($product['point'] == '') {
             $product['point'] = "なし";
         }else{
             $product['point'] = $product['point']."pt";
         }
 
-        if($product['ourprice'] == "") {
+        if($product['ourprice'] == '') {
             $product['ourprice'] = "在庫切れ";
         }
 
-        if($product['availability'] == "") {
-            $product['availability'] = "在庫切れ";
+        if($product['availability'] == '') {
+            $product['availability'] = '在庫切れ';
         }
 
         $product['edit'] = $this->canEdit()?'<a href="'.$CONF['ActionURL'] . '?action=plugin&amp;name=Amazon&amp;type=edit&amp;asbncode='.$product['asbncode'].'" target="_blank">edit</a>':'';
@@ -400,34 +412,52 @@ EOL;
         if (_CHARSET != 'UTF-8') {
             mb_convert_variables(_CHARSET, "UTF-8", $product);
         }
-        $sql = 'INSERT INTO ' . sql_table('plugin_amazon')
-            . " (blogid, asbncode, title, catalog, media, author, manufacturer,"
-            . " listprice, ourprice, point, releasedate, availability,"
-            . " amazonrate, myrate, similar, imgsize,"
-            . " detailpageurl,"
-            . " smallimageurl, mediumimageurl, largeimageurl,"
-            . " date, adddate)"
-        . "VALUES ('".$blogid."',
-        '".sql_real_escape_string($product['asbncode'])."',
-        '".sql_real_escape_string($product['title'])."',
-        '".sql_real_escape_string($product['catalog'])."',
-        '".sql_real_escape_string($product['media'])."',
-        '".sql_real_escape_string($product['author'])."',
-        '".sql_real_escape_string($product['manufacturer'])."',
-        '".sql_real_escape_string($product['listprice'])."',
-        '".sql_real_escape_string($product['ourprice'])."',
-        '".sql_real_escape_string($product['point'])."',
-        '".sql_real_escape_string($product['releasedate'])."',
-        '".sql_real_escape_string($product['availability'])."',
-		'".sql_real_escape_string(floatval($product['amazonrate']))."',
-		'".sql_real_escape_string(floatval($product['myrate']))."',
-        '".sql_real_escape_string($product['similar'])."',
-		'".sql_real_escape_string($product['imgsize'])."',
-		'".sql_real_escape_string($product['detailpageurl'])."',
-		'".sql_real_escape_string($product['smallimageurl'])."',
-		'".sql_real_escape_string($product['mediumimageurl'])."',
-		'".sql_real_escape_string($product['largeimageurl'])."',
-        ".time().",".time().")";
+        $sql = sprintf(
+            "INSERT INTO %s (blogid, asbncode, title, catalog, media, author, manufacturer, listprice, ourprice, point, releasedate, availability, amazonrate, myrate, similar, imgsize, detailpageurl, smallimageurl, mediumimageurl, largeimageurl, date, adddate)VALUES ('%s',
+        '%s',
+        '%s',
+        '%s',
+        '%s',
+        '%s',
+        '%s',
+        '%s',
+        '%s',
+        '%s',
+        '%s',
+        '%s',
+		'%s',
+		'%s',
+        '%s',
+		'%s',
+		'%s',
+		'%s',
+		'%s',
+		'%s',
+        %s,%s)"
+            , sql_table('plugin_amazon')
+            , $blogid
+            , sql_real_escape_string($product['asbncode'])
+            , sql_real_escape_string($product['title'])
+            , sql_real_escape_string($product['catalog'])
+            , sql_real_escape_string($product['media'])
+            , sql_real_escape_string($product['author'])
+            , sql_real_escape_string($product['manufacturer'])
+            , sql_real_escape_string($product['listprice'])
+            , sql_real_escape_string($product['ourprice'])
+            , sql_real_escape_string($product['point'])
+            , sql_real_escape_string($product['releasedate'])
+            , sql_real_escape_string($product['availability'])
+            , sql_real_escape_string((float)$product['amazonrate'])
+            , sql_real_escape_string((float)$product['myrate'])
+            , sql_real_escape_string($product['similar'])
+            , sql_real_escape_string($product['imgsize'])
+            , sql_real_escape_string($product['detailpageurl'])
+            , sql_real_escape_string($product['smallimageurl'])
+            , sql_real_escape_string($product['mediumimageurl'])
+            , sql_real_escape_string($product['largeimageurl'])
+            , time()
+            , time()
+        );
 		//mktime()
         //$res = @sql_query($sql);
 		$res = @sql_query($sql);
@@ -437,28 +467,30 @@ EOL;
 
     function updateData($product) {
         $product = $this->getAmazonData($product, $mode = "update");
-        if (empty($product) || empty($product['detailpageurl']))
-            return ;
-        if (_CHARSET != "UTF-8") {
-            mb_convert_variables(_CHARSET, "UTF-8", $product);
+        if (empty($product) || empty($product['detailpageurl'])) {
+            return;
         }
+        if (_CHARSET !== "UTF-8") mb_convert_variables(_CHARSET, "UTF-8", $product);
         
 //		$product['date'] = mktime();
 		$product['date'] = time();
 
 
-        $sql = 'UPDATE '.sql_table('plugin_amazon')
-            . " SET     ourprice='". sql_real_escape_string($product['ourprice']) . "',"
-            . "     point='". sql_real_escape_string($product['point']) . "',"
-            . "     availability='" . sql_real_escape_string($product['availability']) . "',"
-            . "     similar='". sql_real_escape_string($product['similar']) . "',"
-            . "     imgsize='". sql_real_escape_string($product['imgsize']) . "',"
-            . "     date='" . sql_real_escape_string($product['date'])  . "',"
-            . "     detailpageurl='" . sql_real_escape_string($product['detailpageurl'])  . "',"
-            . "     smallimageurl='" . sql_real_escape_string($product['smallimageurl'])  . "',"
-            . "     mediumimageurl='" . sql_real_escape_string($product['mediumimageurl'])  . "',"
-            . "     largeimageurl='" . sql_real_escape_string($product['largeimageurl'])  . "'"
-            . " WHERE asbncode='" . sql_real_escape_string($product['asbncode'])."'";
+        $sql = sprintf(
+            "UPDATE %s SET ourprice='%s', point='%s', availability='%s', similar='%s', imgsize='%s', date='%s', detailpageurl='%s', smallimageurl='%s', mediumimageurl='%s', largeimageurl='%s' WHERE asbncode='%s'"
+            , sql_table('plugin_amazon')
+            , sql_real_escape_string($product['ourprice'])
+            , sql_real_escape_string($product['point'])
+            , sql_real_escape_string($product['availability'])
+            , sql_real_escape_string($product['similar'])
+            , sql_real_escape_string($product['imgsize'])
+            , sql_real_escape_string($product['date'])
+            , sql_real_escape_string($product['detailpageurl'])
+            , sql_real_escape_string($product['smallimageurl'])
+            , sql_real_escape_string($product['mediumimageurl'])
+            , sql_real_escape_string($product['largeimageurl'])
+            , sql_real_escape_string($product['asbncode'])
+        );
 			//. " SET amazonrate='" . sql_real_escape_string($product['amazonrate']) . "',"
 //       sql_query($sql);*/
 		sql_query($sql);
@@ -489,8 +521,9 @@ EOL;
 	}
 
     function getAmazonData($product, $mode) {
-        if (!$this->getActive())
+        if (!$this->getActive()) {
             return array();
+        }
 
         // https://docs.aws.amazon.com/AWSECommerceService/latest/DG/ItemLookup.html
         $params = array();
@@ -501,39 +534,43 @@ EOL;
 
 		$request = $this->makeAmazonRequestURLWithSignature($params);
 		$xml = @file_get_contents($request);
-        if ($xml === FALSE) {
+        if ($xml === false) {
             // ネットに接続できない または 制限による503エラー または オプション設定値の誤入力
             // APIの制限： 1秒間に１回までの制限がある
             usleep(500000); // 0.5秒間待機します(500*1000マイクロ秒)
             $request = $this->makeAmazonRequestURLWithSignature($params);
             $xml = @file_get_contents($request);
-            if ($xml === FALSE) {
+            if ($xml === false) {
                 return array(); // 失敗したので取得をあきらめて関数を終了する
             }
         }
 
         $obj = new SimpleXMLElement($xml);
-        if (!isset($obj->Items) || !isset($obj->Items->Item))
+        if (!isset($obj->Items) || !isset($obj->Items->Item)) {
             return array();
+        }
         $obj_item = $obj->Items->Item;
         $json = json_encode($obj_item);
         $ews_item = json_decode($json,TRUE);
         unset($obj, $obj_item);
 
-        if (empty($ews_item))
+        if (empty($ews_item)) {
             return array();
-
-        if (!empty($ews_item['DetailPageURL']))
-            $product['detailpageurl'] = (string) $ews_item['DetailPageURL'];
-        foreach(array('SmallImage', 'MediumImage', 'LargeImage') as $key0) {
-            $tmp_key = strtolower($key0) . 'url';
-            if (empty($ews_item[$key0]['URL']))
-                $product[$tmp_key] = '';
-            else
-                $product[$tmp_key] = (string) $ews_item[$key0]['URL'];
         }
 
-        if($mode == "new") {
+        if (!empty($ews_item['DetailPageURL'])) {
+            $product['detailpageurl'] = (string)$ews_item['DetailPageURL'];
+        }
+        foreach(array('SmallImage', 'MediumImage', 'LargeImage') as $key0) {
+            $tmp_key = strtolower($key0) . 'url';
+            if (empty($ews_item[$key0]['URL'])) {
+                $product[$tmp_key] = '';
+            } else {
+                $product[$tmp_key] = (string)$ews_item[$key0]['URL'];
+            }
+        }
+
+        if($mode === 'new') {
             $product['title'] = $ews_item['ItemAttributes']['Title'];
             $product['catalog'] = $ews_item['ItemAttributes']['ProductGroup'];
             $product['media'] = $ews_item['ItemAttributes']['Binding'];
@@ -592,7 +629,7 @@ EOL;
         $product['imgsize'] = "";
         foreach($size as $tmp) {
             $imgsize = $tmp."Image";
-            if($tmp != "Small") {
+            if($tmp !== 'Small') {
                 $product['imgsize'] .= ",";
             }
             $product['imgsize'] .= $ews_item[$imgsize]['Width'] . "," . $ews_item[$imgsize]['Height'];
@@ -602,7 +639,9 @@ EOL;
 
     function convertSimilar($spdata, $num) {
         
-        if($spdata == '') return '';
+        if($spdata == '') {
+            return '';
+        }
         
         $max = $num;
         $sp = explode('|', $spdata);
@@ -614,20 +653,20 @@ EOL;
         $similar = '';
         while($i < $max) {
             list($asbncode, $title) = explode(":", $sp[$i]);
-            $similar .= '・<a href="http://www.amazon.co.jp/exec/obidos/ASIN/'.$asbncode.'/'.$this->aid.'" target="_blank">'.$title.'</a><br />';
-            $i = $i + 1;
+            $similar .= sprintf(
+                '・<a href="http://www.amazon.co.jp/exec/obidos/ASIN/%s/%s" target="_blank">%s</a><br />'
+                , $asbncode
+                , $this->aid
+                , $title
+            );
+            $i++;
         }
         return $similar;
     }
 
     function getImages(&$product, $size) {
-        global $CONF, $DIR_MEDIA;
         $amazonurl = 'http://images.amazon.com/images/P/';
-        $result = "no";
         $tmpsize = explode(",", $product['imgsize']);
-
-        $image_key = '';
-
         switch($size) {
             case 's':
                 $img = "_SCTHUMBZZZ_.jpg";
@@ -636,18 +675,7 @@ EOL;
 				$noimgsize = 60;
                 $image_key = 'smallimageurl';
                 break;
-            case 'm':
-                $img = "_SCMZZZZZZZ_.jpg";
-                $width = $tmpsize[2];
-                $height = $tmpsize[3];
-				$noimgsize = 120;
-                $image_key = 'mediumimageurl';
-                break;
             case 'l':
-/*////////change ma
-				$img = "_SCLZZZZZZZ_.jpg";
-				$width = $tmpsize[4];
-				$height = $tmpsize[5];*/
 				$img = "_SCLZZZZZZZ_AA380_.jpg";
 				$width = 380;
 				$height = 380;
@@ -663,7 +691,6 @@ EOL;
                 break;
         }
 
-//        $noimg = "http://images-jp.amazon.com/images/G/09/x-locale/detail/thumb-no-image.gif";
 		$noimg = 'http://images-jp.amazon.com/images/G/09/nav2/dp/no-image-no-ciu._AA'. $noimgsize .'_.gif';
 
         $imgfile = $product['asbncode'] .'.09.'.$img;
@@ -723,8 +750,10 @@ FORM;
     }
 
     function canEdit() {
-        global $member, $manager;
-        if (!$member->isLoggedIn()) return 0;
+        global $member;
+        if (!$member->isLoggedIn()) {
+            return 0;
+        }
 
             return $member->isAdmin();
     }
@@ -797,7 +826,7 @@ if(hsc($row->used) == "yes") {
 <td>img</td>
 <td><select name="img" />
 <?php
-if(hsc($row->img) == "yes") {
+if(hsc($row->img) === 'yes') {
     echo "<option value='yes' selected>yes</option>";
     echo "<option value='no' >no</option>";
 }else{
